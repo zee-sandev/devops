@@ -1,0 +1,105 @@
+# Example: PR Comment-Based Version Bumping
+# This file demonstrates how consuming repositories can use PR comment commands
+
+name: PR Comment Version Bump
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  # Basic setup - anyone with write access can bump versions
+  basic-bump:
+    if: github.event.issue.pull_request
+    uses: your-org/devops/.github/workflows/versioning/pr-comment-bump.yml@main
+    secrets: inherit
+
+---
+# Advanced setup with specific user permissions
+name: PR Comment Version Bump (Advanced)
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  # Advanced setup - only specific users and teams can bump versions
+  advanced-bump:
+    if: github.event.issue.pull_request
+    uses: your-org/devops/.github/workflows/versioning/pr-comment-bump.yml@main
+    with:
+      allowed-users: 'alice,bob,charlie'                    # Specific users
+      allowed-teams: 'devops-team,release-managers'         # GitHub teams
+      require-approval: true                                # Require manual approval
+      auto-merge-after-bump: false                          # Don't auto-merge
+    secrets: inherit
+
+---
+# Production-ready setup
+name: PR Comment Version Bump (Production)
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  version-bump:
+    if: github.event.issue.pull_request
+    uses: your-org/devops/.github/workflows/versioning/pr-comment-bump.yml@main
+    with:
+      allowed-teams: 'release-team,devops'
+      require-approval: true
+      auto-merge-after-bump: true                           # Auto-merge after success
+    secrets: inherit
+
+---
+# Usage Examples:
+
+# 1. Interactive mode (will prompt for environment and bump type)
+# Comment: /bump
+
+# 2. Auto-detected environment with default bump type
+# Comment: /bump dev
+
+# 3. Specific environment and bump type  
+# Comment: /bump qa minor
+
+# 4. Production release with force flag
+# Comment: /bump prd major --force
+
+# 5. Show help
+# Comment: /bump help
+
+# Environment Detection Rules:
+# - main/master → dev
+# - develop → dev  
+# - release/* → qa
+# - staging → qa
+# - production/prod → prd
+
+# Bump Type Detection Rules:
+# - hotfix/*, fix/* → patch
+# - feature/*, feat/* → minor
+# - breaking/*, major/* → major
+
+# Example Scenarios:
+
+# Scenario 1: Feature branch to main
+# PR: feature/new-dashboard → main
+# Comment: /bump
+# Result: Detects dev environment, minor bump type, prompts for confirmation
+
+# Scenario 2: Hotfix to main
+# PR: hotfix/urgent-fix → main  
+# Comment: /bump
+# Result: Detects dev environment, patch bump type, prompts for confirmation
+
+# Scenario 3: Release branch
+# PR: release/v2.1.0 → main
+# Comment: /bump
+# Result: Detects qa environment, patch bump type, prompts for confirmation
+
+# Scenario 4: Direct command
+# PR: feature/user-auth → main
+# Comment: /bump dev minor
+# Result: Immediately bumps dev environment with minor version

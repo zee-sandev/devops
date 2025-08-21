@@ -1,0 +1,207 @@
+name: Tag Bump (Legacy)
+
+on:
+  workflow_call:
+    inputs:
+      env:
+        description: 'Environment to bump tag for (dev, qa, prd)'
+        required: true
+        type: string
+      version:
+        description: 'Version to bump to (e.g., 1.2.3)'
+        required: true
+        type: string
+      force:
+        description: 'Force tag creation (overwrite existing)'
+        required: false
+        default: false
+        type: boolean
+      auto-bump:
+        description: 'Use automatic version bumping instead of exact version'
+        required: false
+        default: false
+        type: boolean
+      bump-type:
+        description: 'Type of version bump (patch, minor, major) - only used if auto-bump is true'
+        required: false
+        default: 'patch'
+        type: string
+    outputs:
+      tag-created:
+        description: 'The tag that was created'
+        value: ${{ jobs.bump-tag.outputs.tag-created }}
+
+jobs:
+  bump-tag:
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ inputs.env == 'prd' && 'production-tag-bump' || 'tag-bump' }}
+      # Production requires manual approval, others can be automatic
+    outputs:
+      tag-created: ${{ steps.create-tag.outputs.tag-created }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for tags
+
+      - name: Validate inputs
+        run: |
+          ENV="${{ inputs.env }}"
+          VERSION="${{ inputs.version }}"
+          AUTO_BUMP="${{ inputs.auto-bump }}"
+          
+          # Validate environment
+          case $ENV in
+            "dev"|"qa"|"prd")
+              echo "✅ Valid environment: $ENV"
+              ;;
+            *)
+              echo "❌ Invalid environment: $ENV. Must be dev, qa, or prd"
+              exit 1
+              ;;
+          esac
+          
+          # Validate version format if not auto-bumping
+          if [ "$AUTO_BUMP" != "true" ]; then
+            if ! [[ $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "❌ Invalid version format: $VERSION. Must be semantic version (e.g., 1.2.3)"
+              exit 1
+            fi
+          fi
+
+      - name: Set up Git user
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Calculate version (auto-bump)
+        if: ${{ inputs.auto-bump }}
+        id: auto-version
+        run: |
+          ENV="${{ inputs.env }}"
+          BUMP_TYPE="${{ inputs.bump-type }}"
+          
+          # Get the latest tag for the environment
+          LATEST_TAG=$(git tag -l "${ENV}-v*" --sort=-version:refname | head -n1)
+          
+          if [ -z "$LATEST_TAG" ]; then
+            echo "No existing tags found for environment $ENV, starting with 1.0.0"
+            NEW_VERSION="1.0.0"
+          else
+            echo "Found latest tag: $LATEST_TAG"
+            # Extract version from tag
+            CURRENT_VERSION=$(echo "$LATEST_TAG" | sed "s/${ENV}-v//")
+            
+            # Parse semantic version
+            IFS='.' read -ra VERSION_PARTS <<< "$CURRENT_VERSION"
+            MAJOR=${VERSION_PARTS[0]:-0}
+            MINOR=${VERSION_PARTS[1]:-0}
+            PATCH=${VERSION_PARTS[2]:-0}
+            
+            # Bump version based on type
+            case $BUMP_TYPE in
+              "major")
+                MAJOR=$((MAJOR + 1))
+                MINOR=0
+                PATCH=0
+                ;;
+              "minor")
+                MINOR=$((MINOR + 1))
+                PATCH=0
+                ;;
+              "patch"|*)
+                PATCH=$((PATCH + 1))
+                ;;
+            esac
+            
+            NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+          fi
+          
+          echo "calculated-version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "📈 Calculated new version: $NEW_VERSION"
+
+      - name: Determine final version and tag name
+        id: tagname
+        run: |
+          ENV="${{ inputs.env }}"
+          AUTO_BUMP="${{ inputs.auto-bump }}"
+          
+          if [ "$AUTO_BUMP" = "true" ]; then
+            VERSION="${{ steps.auto-version.outputs.calculated-version }}"
+          else
+            VERSION="${{ inputs.version }}"
+          fi
+          
+          TAG="${ENV}-v${VERSION}"
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "🏷️  Final tag name: $TAG"
+
+      - name: Check if tag exists
+        id: check-existing
+        run: |
+          TAG_NAME="${{ steps.tagname.outputs.tag }}"
+          FORCE="${{ inputs.force }}"
+          
+          if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
+            echo "⚠️  Tag $TAG_NAME already exists"
+            if [ "$FORCE" = "true" ]; then
+              echo "🔨 Force flag is set, will overwrite existing tag"
+              echo "can-proceed=true" >> $GITHUB_OUTPUT
+            else
+              echo "❌ Tag already exists and force flag is not set"
+              exit 1
+            fi
+          else
+            echo "✅ Tag $TAG_NAME does not exist, proceeding with creation"
+            echo "can-proceed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Production confirmation
+        if: ${{ inputs.env == 'prd' }}
+        run: |
+          echo "🚨 PRODUCTION TAG CREATION 🚨"
+          echo "============================="
+          echo "Environment: ${{ inputs.env }}"
+          echo "Version: ${{ steps.tagname.outputs.version }}"
+          echo "Tag: ${{ steps.tagname.outputs.tag }}"
+          echo "Auto-bump: ${{ inputs.auto-bump }}"
+          echo "Force: ${{ inputs.force }}"
+          echo "============================="
+          echo "⚠️  This will create a production tag!"
+
+      - name: Create or update tag
+        id: create-tag
+        run: |
+          TAG_NAME="${{ steps.tagname.outputs.tag }}"
+          FORCE="${{ inputs.force }}"
+          
+          echo "🏷️  Creating tag: $TAG_NAME"
+          
+          if [ "$FORCE" = "true" ]; then
+            git tag -f "$TAG_NAME"
+            git push origin "$TAG_NAME" --force
+            echo "✅ Tag $TAG_NAME created/updated (forced)"
+          else
+            git tag "$TAG_NAME"
+            git push origin "$TAG_NAME"
+            echo "✅ Tag $TAG_NAME created"
+          fi
+          
+          echo "tag-created=$TAG_NAME" >> $GITHUB_OUTPUT
+
+      - name: Generate summary
+        run: |
+          echo "## 🏷️ Tag Creation Summary"
+          echo "| Field | Value |"
+          echo "|-------|-------|"
+          echo "| Environment | ${{ inputs.env }} |"
+          echo "| Version | ${{ steps.tagname.outputs.version }} |"
+          echo "| Tag Created | ${{ steps.create-tag.outputs.tag-created }} |"
+          echo "| Auto-bump | ${{ inputs.auto-bump }} |"
+          echo "| Bump Type | ${{ inputs.bump-type }} |"
+          echo "| Force Used | ${{ inputs.force }} |"
+          echo "| Timestamp | $(date -u +"%Y-%m-%d %H:%M:%S UTC") |"
+
+

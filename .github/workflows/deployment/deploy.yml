@@ -11,6 +11,10 @@ on:
         description: 'Node.js version to use'
         required: false
         default: '18'
+      pnpm-version:
+        description: 'pnpm version to use'
+        required: false
+        default: '8'
 
 jobs:
   deploy:
@@ -37,18 +41,11 @@ jobs:
             exit 1
           fi
 
-      - name: Use Node.js ${{ inputs.node-version }}
-        uses: actions/setup-node@v4
+      - name: Setup Node.js and pnpm
+        uses: ./.github/actions/setup
         with:
           node-version: ${{ inputs.node-version }}
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 8
-
-      - name: Install dependencies
-        run: pnpm install
+          pnpm-version: ${{ inputs.pnpm-version }}
 
       - name: Deploy with pnpm
         run: |

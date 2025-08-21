@@ -1,0 +1,147 @@
+name: DevOps Central Main Workflow
+
+on:
+  workflow_call:
+    inputs:
+      workflow-type:
+        description: 'Type of workflow to run (ci, deploy, tag-auto, tag-manual)'
+        required: true
+        type: string
+      environment:
+        description: 'Target environment (dev, qa, prd)'
+        required: false
+        default: 'dev'
+        type: string
+      node-version:
+        description: 'Node.js version to use'
+        required: false
+        default: '18'
+        type: string
+      pnpm-version:
+        description: 'pnpm version to use'
+        required: false
+        default: '8'
+        type: string
+      # CI specific inputs
+      run-tests:
+        description: 'Whether to run tests'
+        required: false
+        default: true
+        type: boolean
+      run-lint:
+        description: 'Whether to run linting'
+        required: false
+        default: true
+        type: boolean
+      run-build:
+        description: 'Whether to run build'
+        required: false
+        default: true
+        type: boolean
+      run-security-audit:
+        description: 'Whether to run security audit'
+        required: false
+        default: true
+        type: boolean
+      # Deployment specific inputs
+      tag:
+        description: 'Tag to deploy (for deployment workflows)'
+        required: false
+        type: string
+      # Versioning specific inputs
+      version:
+        description: 'Version for manual tagging'
+        required: false
+        type: string
+      bump-type:
+        description: 'Type of version bump (patch, minor, major)'
+        required: false
+        default: 'patch'
+        type: string
+      force:
+        description: 'Force operations (where applicable)'
+        required: false
+        default: false
+        type: boolean
+      create-release:
+        description: 'Create GitHub release'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  # Validate inputs before running any workflows
+  validate:
+    runs-on: ubuntu-latest
+    outputs:
+      workflow-type: ${{ steps.validate.outputs.workflow-type }}
+      is-valid: ${{ steps.validate.outputs.is-valid }}
+    steps:
+      - name: Validate workflow inputs
+        id: validate
+        uses: ./.github/actions/shared/validate-inputs
+        with:
+          environment: ${{ inputs.environment }}
+          version: ${{ inputs.version }}
+          node-version: ${{ inputs.node-version }}
+          pnpm-version: ${{ inputs.pnpm-version }}
+      
+      - name: Validate workflow type
+        run: |
+          WORKFLOW_TYPE="${{ inputs.workflow-type }}"
+          case $WORKFLOW_TYPE in
+            "ci"|"deploy"|"tag-auto"|"tag-manual")
+              echo "✅ Valid workflow type: $WORKFLOW_TYPE"
+              echo "workflow-type=$WORKFLOW_TYPE" >> $GITHUB_OUTPUT
+              echo "is-valid=true" >> $GITHUB_OUTPUT
+              ;;
+            *)
+              echo "❌ Invalid workflow type: $WORKFLOW_TYPE"
+              echo "Valid options: ci, deploy, tag-auto, tag-manual"
+              exit 1
+              ;;
+          esac
+
+  # CI Pipeline
+  ci:
+    if: ${{ needs.validate.outputs.workflow-type == 'ci' }}
+    needs: validate
+    uses: ./.github/workflows/ci/ci.yml
+    with:
+      node-version: ${{ inputs.node-version }}
+      pnpm-version: ${{ inputs.pnpm-version }}
+      run-tests: ${{ inputs.run-tests }}
+      run-lint: ${{ inputs.run-lint }}
+      run-build: ${{ inputs.run-build }}
+      run-security-audit: ${{ inputs.run-security-audit }}
+
+  # Deployment
+  deploy:
+    if: ${{ needs.validate.outputs.workflow-type == 'deploy' }}
+    needs: validate
+    uses: ./.github/workflows/deployment/deploy.yml
+    with:
+      tag: ${{ inputs.tag }}
+      node-version: ${{ inputs.node-version }}
+      pnpm-version: ${{ inputs.pnpm-version }}
+
+  # Auto Tagging
+  auto-tag:
+    if: ${{ needs.validate.outputs.workflow-type == 'tag-auto' }}
+    needs: validate
+    uses: ./.github/workflows/versioning/auto-tag-bump.yml
+    with:
+      bump-type: ${{ inputs.bump-type }}
+      environment: ${{ inputs.environment }}
+      dry-run: false
+
+  # Manual Tagging
+  manual-tag:
+    if: ${{ needs.validate.outputs.workflow-type == 'tag-manual' }}
+    needs: validate
+    uses: ./.github/workflows/versioning/manual-tag-bump.yml
+    with:
+      environment: ${{ inputs.environment }}
+      version: ${{ inputs.version }}
+      force: ${{ inputs.force }}
+      create-release: ${{ inputs.create-release }}

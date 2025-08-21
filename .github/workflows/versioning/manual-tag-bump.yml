@@ -1,0 +1,168 @@
+name: Manual Tag Bump
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: 'Target environment (dev, qa, prd)'
+        required: true
+        type: string
+      version:
+        description: 'Exact version to tag (e.g., 1.2.3)'
+        required: true
+        type: string
+      force:
+        description: 'Force tag creation (overwrite existing)'
+        required: false
+        default: false
+        type: boolean
+      create-release:
+        description: 'Create GitHub release after tagging'
+        required: false
+        default: false
+        type: boolean
+    outputs:
+      tag-created:
+        description: 'The tag that was created'
+        value: ${{ jobs.manual-bump.outputs.tag-created }}
+      release-url:
+        description: 'URL of the created release (if created)'
+        value: ${{ jobs.manual-bump.outputs.release-url }}
+
+jobs:
+  validation:
+    runs-on: ubuntu-latest
+    outputs:
+      is-production: ${{ steps.check-env.outputs.is-production }}
+      tag-name: ${{ steps.outputs.tag-name }}
+    steps:
+      - name: Validate inputs
+        id: check-env
+        uses: ./.github/actions/shared/validate-inputs
+        with:
+          environment: ${{ inputs.environment }}
+          version: ${{ inputs.version }}
+      
+      - name: Set outputs
+        id: outputs
+        run: |
+          ENV="${{ inputs.environment }}"
+          VERSION="${{ inputs.version }}"
+          TAG_NAME="${ENV}-v${VERSION}"
+          echo "tag-name=$TAG_NAME" >> $GITHUB_OUTPUT
+          echo "Planned tag name: $TAG_NAME"
+
+  manual-bump:
+    needs: validation
+    runs-on: ubuntu-latest
+    # Use different environments based on target
+    environment: 
+      name: ${{ inputs.environment == 'prd' && 'production-tag-bump' || 'tag-bump' }}
+      # Production requires manual approval, others can be automatic
+    outputs:
+      tag-created: ${{ steps.create-tag.outputs.tag-created }}
+      release-url: ${{ steps.create-release.outputs.release-url }}
+    steps:
+      - name: Setup Git
+        uses: ./.github/actions/shared/git-setup
+        with:
+          fetch-depth: 0
+
+      - name: Check if tag exists
+        id: check-tag
+        run: |
+          TAG_NAME="${{ needs.validation.outputs.tag-name }}"
+          FORCE="${{ inputs.force }}"
+          
+          if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
+            echo "Tag $TAG_NAME already exists"
+            if [ "$FORCE" = "true" ]; then
+              echo "Force flag is set, will overwrite existing tag"
+              echo "exists=true" >> $GITHUB_OUTPUT
+              echo "can-proceed=true" >> $GITHUB_OUTPUT
+            else
+              echo "Tag already exists and force flag is not set"
+              echo "exists=true" >> $GITHUB_OUTPUT
+              echo "can-proceed=false" >> $GITHUB_OUTPUT
+              exit 1
+            fi
+          else
+            echo "Tag $TAG_NAME does not exist, proceeding with creation"
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "can-proceed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Production deployment confirmation
+        if: ${{ needs.validation.outputs.is-production == 'true' }}
+        run: |
+          echo "🚨 PRODUCTION DEPLOYMENT CONFIRMATION 🚨"
+          echo "=================================="
+          echo "Environment: ${{ inputs.environment }}"
+          echo "Version: ${{ inputs.version }}"
+          echo "Tag: ${{ needs.validation.outputs.tag-name }}"
+          echo "Force: ${{ inputs.force }}"
+          echo "=================================="
+          echo "This action will create a production tag!"
+          echo "Please ensure all necessary approvals are in place."
+
+      - name: Create or update tag
+        id: create-tag
+        uses: ./.github/actions/shared/create-tag
+        with:
+          tag-name: ${{ needs.validation.outputs.tag-name }}
+          force: ${{ inputs.force }}
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          TAG_NAME="${{ needs.validation.outputs.tag-name }}"
+          ENV="${{ inputs.environment }}"
+          
+          # Get previous tag for this environment
+          PREVIOUS_TAG=$(git tag -l "${ENV}-v*" --sort=-version:refname | grep -v "^$TAG_NAME$" | head -n1)
+          
+          echo "## Changelog for $TAG_NAME" > changelog.md
+          echo "" >> changelog.md
+          echo "**Environment:** $ENV" >> changelog.md
+          echo "**Version:** ${{ inputs.version }}" >> changelog.md
+          echo "**Created:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> changelog.md
+          echo "" >> changelog.md
+          
+          if [ -n "$PREVIOUS_TAG" ]; then
+            echo "**Previous Tag:** $PREVIOUS_TAG" >> changelog.md
+            echo "" >> changelog.md
+            echo "### Changes since $PREVIOUS_TAG:" >> changelog.md
+            git log --oneline "$PREVIOUS_TAG".."$TAG_NAME" >> changelog.md || echo "No commits found" >> changelog.md
+          else
+            echo "**Note:** This is the first tag for environment $ENV" >> changelog.md
+          fi
+          
+          echo "changelog-file=changelog.md" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        id: create-release
+        if: ${{ inputs.create-release }}
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ needs.validation.outputs.tag-name }}
+          release_name: "Release ${{ needs.validation.outputs.tag-name }}"
+          body_path: ${{ steps.changelog.outputs.changelog-file }}
+          draft: false
+          prerelease: ${{ inputs.environment != 'prd' }}
+
+      - name: Summary
+        run: |
+          echo "✅ Tag Creation Summary"
+          echo "====================="
+          echo "Environment: ${{ inputs.environment }}"
+          echo "Version: ${{ inputs.version }}"
+          echo "Tag Created: ${{ steps.create-tag.outputs.tag-created }}"
+          echo "Is Production: ${{ needs.validation.outputs.is-production }}"
+          echo "Force Used: ${{ inputs.force }}"
+          echo "Release Created: ${{ inputs.create-release }}"
+          if [ "${{ inputs.create-release }}" = "true" ]; then
+            echo "Release URL: ${{ steps.create-release.outputs.html_url }}"
+          fi
+          echo "====================="

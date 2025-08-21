@@ -1,0 +1,122 @@
+name: CI Pipeline
+
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        description: 'Node.js version to use'
+        required: false
+        default: '18'
+      pnpm-version:
+        description: 'pnpm version to use'
+        required: false
+        default: '8'
+      run-tests:
+        description: 'Whether to run tests'
+        required: false
+        default: true
+        type: boolean
+      run-lint:
+        description: 'Whether to run linting'
+        required: false
+        default: true
+        type: boolean
+      run-build:
+        description: 'Whether to run build'
+        required: false
+        default: true
+        type: boolean
+      run-security-audit:
+        description: 'Whether to run security audit'
+        required: false
+        default: true
+        type: boolean
+
+jobs:
+  lint:
+    if: ${{ inputs.run-lint }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js and pnpm
+        uses: ./.github/actions/setup
+        with:
+          node-version: ${{ inputs.node-version }}
+          pnpm-version: ${{ inputs.pnpm-version }}
+
+      - name: Run linter
+        run: |
+          if pnpm run | grep -q "lint"; then
+            pnpm run lint
+          else
+            echo "No lint script found in package.json"
+            exit 1
+          fi
+
+  test:
+    if: ${{ inputs.run-tests }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js and pnpm
+        uses: ./.github/actions/setup
+        with:
+          node-version: ${{ inputs.node-version }}
+          pnpm-version: ${{ inputs.pnpm-version }}
+
+      - name: Run tests
+        run: |
+          if pnpm run | grep -q "test"; then
+            pnpm run test
+          else
+            echo "No test script found in package.json"
+            exit 1
+          fi
+
+  build:
+    if: ${{ inputs.run-build }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js and pnpm
+        uses: ./.github/actions/setup
+        with:
+          node-version: ${{ inputs.node-version }}
+          pnpm-version: ${{ inputs.pnpm-version }}
+
+      - name: Run build
+        run: |
+          if pnpm run | grep -q "build"; then
+            pnpm run build
+          else
+            echo "No build script found in package.json"
+            exit 1
+          fi
+
+  security-audit:
+    if: ${{ inputs.run-security-audit }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js and pnpm
+        uses: ./.github/actions/setup
+        with:
+          node-version: ${{ inputs.node-version }}
+          pnpm-version: ${{ inputs.pnpm-version }}
+
+      - name: Run security audit
+        run: |
+          if pnpm audit --audit-level=moderate; then
+            echo "Security audit passed"
+          else
+            echo "Security vulnerabilities found"
+            exit 1
+          fi

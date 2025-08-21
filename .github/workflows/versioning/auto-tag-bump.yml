@@ -1,0 +1,86 @@
+name: Auto Tag Bump
+
+on:
+  workflow_call:
+    inputs:
+      bump-type:
+        description: 'Type of version bump (patch, minor, major)'
+        required: false
+        default: 'patch'
+        type: string
+      environment:
+        description: 'Target environment (dev, qa, prd)'
+        required: false
+        default: 'dev'
+        type: string
+      base-version:
+        description: 'Base version to start from (e.g., 1.0.0)'
+        required: false
+        default: '1.0.0'
+        type: string
+      dry-run:
+        description: 'Run in dry-run mode (no actual tag creation)'
+        required: false
+        default: false
+        type: boolean
+    outputs:
+      new-tag:
+        description: 'The newly created tag'
+        value: ${{ jobs.auto-bump.outputs.new-tag }}
+      previous-tag:
+        description: 'The previous tag before bumping'
+        value: ${{ jobs.auto-bump.outputs.previous-tag }}
+
+jobs:
+  auto-bump:
+    runs-on: ubuntu-latest
+    outputs:
+      new-tag: ${{ steps.outputs.new-tag }}
+      previous-tag: ${{ steps.outputs.previous-tag }}
+    steps:
+      - name: Setup Git
+        uses: ./.github/actions/shared/git-setup
+        with:
+          fetch-depth: 0
+
+      - name: Calculate next version
+        id: calc-version
+        uses: ./.github/actions/shared/version-calculator
+        with:
+          environment: ${{ inputs.environment }}
+          bump-type: ${{ inputs.bump-type }}
+          base-version: ${{ inputs.base-version }}
+
+      - name: Create new tag
+        id: bump
+        uses: ./.github/actions/shared/create-tag
+        with:
+          tag-name: ${{ steps.calc-version.outputs.next-tag }}
+          dry-run: ${{ inputs.dry-run }}
+
+      - name: Update workflow outputs
+        id: outputs
+        run: |
+          echo "new-tag=${{ steps.bump.outputs.tag-created }}" >> $GITHUB_OUTPUT
+          echo "previous-tag=${{ steps.calc-version.outputs.current-tag }}" >> $GITHUB_OUTPUT
+
+      - name: Create release notes
+        if: ${{ !inputs.dry-run }}
+        run: |
+          NEW_TAG="${{ steps.bump.outputs.tag-created }}"
+          PREVIOUS_TAG="${{ steps.calc-version.outputs.current-tag }}"
+          ENV="${{ inputs.environment }}"
+          
+          echo "## Release Notes for $NEW_TAG"
+          echo ""
+          echo "**Environment:** $ENV"
+          echo "**Previous Tag:** $PREVIOUS_TAG"
+          echo "**New Tag:** $NEW_TAG"
+          echo "**Bump Type:** ${{ inputs.bump-type }}"
+          echo ""
+          echo "### Changes"
+          if [ "$PREVIOUS_TAG" != "$NEW_TAG" ]; then
+            git log --oneline "$PREVIOUS_TAG".."$NEW_TAG" || echo "No changes found"
+          else
+            echo "Initial release"
+          fi

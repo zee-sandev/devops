@@ -1,0 +1,95 @@
+name: 'Version Calculator'
+description: 'Calculate next version based on current tags and bump type'
+
+inputs:
+  environment:
+    description: 'Environment to calculate version for'
+    required: true
+  bump-type:
+    description: 'Type of version bump (patch, minor, major)'
+    required: false
+    default: 'patch'
+  base-version:
+    description: 'Base version if no tags exist'
+    required: false
+    default: '1.0.0'
+
+outputs:
+  current-version:
+    description: 'Current version from latest tag'
+    value: ${{ steps.calculate.outputs.current-version }}
+  next-version:
+    description: 'Next calculated version'
+    value: ${{ steps.calculate.outputs.next-version }}
+  current-tag:
+    description: 'Current tag name'
+    value: ${{ steps.calculate.outputs.current-tag }}
+  next-tag:
+    description: 'Next tag name'
+    value: ${{ steps.calculate.outputs.next-tag }}
+
+runs:
+  using: composite
+  steps:
+    - name: Calculate next version
+      id: calculate
+      shell: bash
+      run: |
+        ENV="${{ inputs.environment }}"
+        BUMP_TYPE="${{ inputs.bump-type }}"
+        BASE_VERSION="${{ inputs.base-version }}"
+        
+        echo "🔍 Calculating version for environment: $ENV"
+        echo "📈 Bump type: $BUMP_TYPE"
+        
+        # Get the latest tag for the environment
+        LATEST_TAG=$(git tag -l "${ENV}-v*" --sort=-version:refname | head -n1)
+        
+        if [ -z "$LATEST_TAG" ]; then
+          echo "📦 No existing tags found for environment $ENV"
+          CURRENT_VERSION="$BASE_VERSION"
+          CURRENT_TAG="${ENV}-v${BASE_VERSION}"
+        else
+          echo "🏷️ Found latest tag: $LATEST_TAG"
+          CURRENT_TAG="$LATEST_TAG"
+          # Extract version from tag (remove environment prefix and 'v')
+          CURRENT_VERSION=$(echo "$LATEST_TAG" | sed "s/${ENV}-v//")
+        fi
+        
+        echo "📋 Current version: $CURRENT_VERSION"
+        
+        # Parse semantic version
+        IFS='.' read -ra VERSION_PARTS <<< "$CURRENT_VERSION"
+        MAJOR=${VERSION_PARTS[0]:-0}
+        MINOR=${VERSION_PARTS[1]:-0}
+        PATCH=${VERSION_PARTS[2]:-0}
+        
+        # Bump version based on type
+        case $BUMP_TYPE in
+          "major")
+            MAJOR=$((MAJOR + 1))
+            MINOR=0
+            PATCH=0
+            echo "🔝 Major version bump: $MAJOR.0.0"
+            ;;
+          "minor")
+            MINOR=$((MINOR + 1))
+            PATCH=0
+            echo "⬆️ Minor version bump: $MAJOR.$MINOR.0"
+            ;;
+          "patch"|*)
+            PATCH=$((PATCH + 1))
+            echo "🔧 Patch version bump: $MAJOR.$MINOR.$PATCH"
+            ;;
+        esac
+        
+        NEXT_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+        NEXT_TAG="${ENV}-v${NEXT_VERSION}"
+        
+        echo "✨ Next version: $NEXT_VERSION"
+        echo "🏷️ Next tag: $NEXT_TAG"
+        
+        echo "current-version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+        echo "next-version=$NEXT_VERSION" >> $GITHUB_OUTPUT
+        echo "current-tag=$CURRENT_TAG" >> $GITHUB_OUTPUT
+        echo "next-tag=$NEXT_TAG" >> $GITHUB_OUTPUT

@@ -1,0 +1,76 @@
+name: 'Create Tag'
+description: 'Create and push a git tag with validation'
+
+inputs:
+  tag-name:
+    description: 'Name of the tag to create'
+    required: true
+  force:
+    description: 'Force tag creation (overwrite existing)'
+    required: false
+    default: 'false'
+  dry-run:
+    description: 'Run in dry-run mode (no actual tag creation)'
+    required: false
+    default: 'false'
+
+outputs:
+  tag-created:
+    description: 'The tag that was created'
+    value: ${{ steps.create.outputs.tag-created }}
+  tag-existed:
+    description: 'Whether the tag already existed'
+    value: ${{ steps.create.outputs.tag-existed }}
+
+runs:
+  using: composite
+  steps:
+    - name: Check if tag exists
+      id: check
+      shell: bash
+      run: |
+        TAG_NAME="${{ inputs.tag-name }}"
+        
+        if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
+          echo "⚠️ Tag $TAG_NAME already exists"
+          echo "tag-exists=true" >> $GITHUB_OUTPUT
+        else
+          echo "✅ Tag $TAG_NAME does not exist"
+          echo "tag-exists=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Create tag
+      id: create
+      shell: bash
+      run: |
+        TAG_NAME="${{ inputs.tag-name }}"
+        FORCE="${{ inputs.force }}"
+        DRY_RUN="${{ inputs.dry-run }}"
+        TAG_EXISTS="${{ steps.check.outputs.tag-exists }}"
+        
+        if [ "$TAG_EXISTS" = "true" ] && [ "$FORCE" != "true" ]; then
+          echo "❌ Tag $TAG_NAME already exists and force is not enabled"
+          exit 1
+        fi
+        
+        if [ "$DRY_RUN" = "true" ]; then
+          echo "🔍 DRY RUN: Would create tag $TAG_NAME"
+          if [ "$FORCE" = "true" ]; then
+            echo "🔍 DRY RUN: Would force push tag"
+          fi
+        else
+          echo "🏷️ Creating tag: $TAG_NAME"
+          
+          if [ "$FORCE" = "true" ]; then
+            git tag -f "$TAG_NAME"
+            git push origin "$TAG_NAME" --force
+            echo "✅ Tag $TAG_NAME created/updated (forced)"
+          else
+            git tag "$TAG_NAME"
+            git push origin "$TAG_NAME"
+            echo "✅ Tag $TAG_NAME created"
+          fi
+        fi
+        
+        echo "tag-created=$TAG_NAME" >> $GITHUB_OUTPUT
+        echo "tag-existed=$TAG_EXISTS" >> $GITHUB_OUTPUT

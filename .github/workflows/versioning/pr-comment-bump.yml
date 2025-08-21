@@ -1,0 +1,514 @@
+name: PR Comment Version Bump
+
+on:
+  workflow_call:
+    inputs:
+      allowed-users:
+        description: 'Comma-separated list of GitHub usernames allowed to trigger bumps'
+        required: false
+        default: ''
+        type: string
+      allowed-teams:
+        description: 'Comma-separated list of GitHub team slugs allowed to trigger bumps'
+        required: false
+        default: ''
+        type: string
+      require-approval:
+        description: 'Require manual approval before bumping'
+        required: false
+        default: false
+        type: boolean
+      auto-merge-after-bump:
+        description: 'Auto-merge PR after successful version bump'
+        required: false
+        default: false
+        type: boolean
+
+  issue_comment:
+    types: [created]
+
+jobs:
+  # Check if comment is on a PR and contains bump command
+  check-trigger:
+    if: github.event.issue.pull_request
+    runs-on: ubuntu-latest
+    outputs:
+      should-process: ${{ steps.parse.outputs.should-process }}
+      command: ${{ steps.parse.outputs.command }}
+      environment: ${{ steps.parse.outputs.environment }}
+      bump-type: ${{ steps.parse.outputs.bump-type }}
+      force: ${{ steps.parse.outputs.force }}
+      help-requested: ${{ steps.parse.outputs.help-requested }}
+    steps:
+      - name: Parse comment command
+        id: parse
+        run: |
+          COMMENT="${{ github.event.comment.body }}"
+          USER="${{ github.event.comment.user.login }}"
+          
+          echo "🔍 Parsing comment from user: $USER"
+          echo "💬 Comment: $COMMENT"
+          
+          # Check if comment starts with /bump
+          if [[ "$COMMENT" =~ ^/bump($|[[:space:]]) ]]; then
+            echo "✅ Bump command detected"
+            echo "should-process=true" >> $GITHUB_OUTPUT
+            
+            # Parse the full command
+            if [[ "$COMMENT" =~ ^/bump[[:space:]]+help$ ]] || [[ "$COMMENT" == "/bump help" ]]; then
+              echo "❓ Help requested"
+              echo "help-requested=true" >> $GITHUB_OUTPUT
+              echo "should-process=false" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+            
+            # Extract environment and bump type
+            # Patterns: /bump, /bump dev, /bump dev patch, /bump qa minor --force
+            PARTS=($COMMENT)
+            ENV=""
+            BUMP_TYPE=""
+            FORCE="false"
+            
+            # Parse arguments
+            for i in "${!PARTS[@]}"; do
+              case "${PARTS[$i]}" in
+                "dev"|"qa"|"prd")
+                  ENV="${PARTS[$i]}"
+                  ;;
+                "patch"|"minor"|"major")
+                  BUMP_TYPE="${PARTS[$i]}"
+                  ;;
+                "--force"|"-f")
+                  FORCE="true"
+                  ;;
+              esac
+            done
+            
+            echo "command=/bump" >> $GITHUB_OUTPUT
+            echo "environment=$ENV" >> $GITHUB_OUTPUT
+            echo "bump-type=$BUMP_TYPE" >> $GITHUB_OUTPUT
+            echo "force=$FORCE" >> $GITHUB_OUTPUT
+            echo "help-requested=false" >> $GITHUB_OUTPUT
+            
+            echo "📋 Parsed command:"
+            echo "  Environment: $ENV"
+            echo "  Bump Type: $BUMP_TYPE" 
+            echo "  Force: $FORCE"
+          else
+            echo "ℹ️ Not a bump command"
+            echo "should-process=false" >> $GITHUB_OUTPUT
+            echo "help-requested=false" >> $GITHUB_OUTPUT
+          fi
+
+  # Show help message
+  show-help:
+    if: needs.check-trigger.outputs.help-requested == 'true'
+    needs: check-trigger
+    runs-on: ubuntu-latest
+    steps:
+      - name: Comment help message
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const helpMessage = `## 🏷️ Version Bump Commands
+
+            ### Usage
+            \`/bump\` - Interactive mode (will prompt for environment and bump type)
+            \`/bump <env>\` - Bump with auto-detected type for specific environment
+            \`/bump <env> <type>\` - Explicit environment and bump type
+            \`/bump help\` - Show this help message
+
+            ### Environments
+            - \`dev\` - Development environment
+            - \`qa\` - QA/Staging environment  
+            - \`prd\` - Production environment (requires approval)
+
+            ### Bump Types
+            - \`patch\` - Bug fixes (1.0.0 → 1.0.1)
+            - \`minor\` - New features (1.0.0 → 1.1.0)
+            - \`major\` - Breaking changes (1.0.0 → 2.0.0)
+
+            ### Flags
+            - \`--force\` or \`-f\` - Force overwrite existing tags
+
+            ### Examples
+            - \`/bump\` - Interactive mode
+            - \`/bump dev\` - Bump dev environment (auto-detects patch)
+            - \`/bump qa minor\` - Bump QA with minor version
+            - \`/bump prd major --force\` - Force major bump for production
+
+            ### Auto-Detection
+            If environment is not specified, it will be detected from target branch:
+            - \`main\` → \`dev\`
+            - \`release/*\` → \`qa\`  
+            - \`develop\` → \`dev\`
+
+            ### Permissions
+            Only authorized users/teams can trigger version bumps.
+            `;
+
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: helpMessage
+            });
+
+  # Check user permissions
+  check-permissions:
+    if: needs.check-trigger.outputs.should-process == 'true'
+    needs: check-trigger
+    runs-on: ubuntu-latest
+    outputs:
+      authorized: ${{ steps.check.outputs.authorized }}
+    steps:
+      - name: Check user permissions
+        id: check
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const user = context.payload.comment.user.login;
+            const allowedUsers = '${{ inputs.allowed-users }}'.split(',').map(u => u.trim()).filter(u => u);
+            const allowedTeams = '${{ inputs.allowed-teams }}'.split(',').map(t => t.trim()).filter(t => t);
+            
+            console.log(`Checking permissions for user: ${user}`);
+            console.log(`Allowed users: ${allowedUsers}`);
+            console.log(`Allowed teams: ${allowedTeams}`);
+            
+            // Check if user is in allowed users list
+            if (allowedUsers.includes(user)) {
+              console.log(`✅ User ${user} is in allowed users list`);
+              core.setOutput('authorized', 'true');
+              return;
+            }
+            
+            // Check if user is in allowed teams
+            if (allowedTeams.length > 0) {
+              try {
+                for (const team of allowedTeams) {
+                  const { data: membership } = await github.rest.teams.getMembershipForUserInOrg({
+                    org: context.repo.owner,
+                    team_slug: team,
+                    username: user,
+                  });
+                  
+                  if (membership.state === 'active') {
+                    console.log(`✅ User ${user} is member of team ${team}`);
+                    core.setOutput('authorized', 'true');
+                    return;
+                  }
+                }
+              } catch (error) {
+                console.log(`Error checking team membership: ${error.message}`);
+              }
+            }
+            
+            // Check if user has write access to repository
+            try {
+              const { data: permission } = await github.rest.repos.getCollaboratorPermissionLevel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                username: user,
+              });
+              
+              if (['admin', 'write'].includes(permission.permission)) {
+                console.log(`✅ User ${user} has ${permission.permission} access`);
+                core.setOutput('authorized', 'true');
+                return;
+              }
+            } catch (error) {
+              console.log(`Error checking repository permissions: ${error.message}`);
+            }
+            
+            console.log(`❌ User ${user} is not authorized`);
+            core.setOutput('authorized', 'false');
+
+  # Get PR information and detect environment
+  get-pr-info:
+    if: needs.check-permissions.outputs.authorized == 'true'
+    needs: [check-trigger, check-permissions]
+    runs-on: ubuntu-latest
+    outputs:
+      pr-number: ${{ steps.pr.outputs.pr-number }}
+      base-branch: ${{ steps.pr.outputs.base-branch }}
+      head-branch: ${{ steps.pr.outputs.head-branch }}
+      detected-env: ${{ steps.detect.outputs.detected-env }}
+      final-env: ${{ steps.detect.outputs.final-env }}
+      final-bump-type: ${{ steps.detect.outputs.final-bump-type }}
+    steps:
+      - name: Get PR information
+        id: pr
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+            });
+            
+            core.setOutput('pr-number', pr.number);
+            core.setOutput('base-branch', pr.base.ref);
+            core.setOutput('head-branch', pr.head.ref);
+            
+            console.log(`PR #${pr.number}: ${pr.head.ref} → ${pr.base.ref}`);
+
+      - name: Detect environment and bump type
+        id: detect
+        run: |
+          BASE_BRANCH="${{ steps.pr.outputs.base-branch }}"
+          HEAD_BRANCH="${{ steps.pr.outputs.head-branch }}"
+          PROVIDED_ENV="${{ needs.check-trigger.outputs.environment }}"
+          PROVIDED_BUMP="${{ needs.check-trigger.outputs.bump-type }}"
+          
+          echo "🔍 Detecting environment and bump type"
+          echo "Base branch: $BASE_BRANCH"
+          echo "Head branch: $HEAD_BRANCH"
+          echo "Provided env: $PROVIDED_ENV"
+          echo "Provided bump: $PROVIDED_BUMP"
+          
+          # Detect environment from base branch if not provided
+          if [ -z "$PROVIDED_ENV" ]; then
+            case "$BASE_BRANCH" in
+              "main"|"master")
+                DETECTED_ENV="dev"
+                ;;
+              "develop")
+                DETECTED_ENV="dev"
+                ;;
+              "release/"*)
+                DETECTED_ENV="qa"
+                ;;
+              "staging")
+                DETECTED_ENV="qa"
+                ;;
+              "production"|"prod")
+                DETECTED_ENV="prd"
+                ;;
+              *)
+                DETECTED_ENV="dev"  # Default fallback
+                ;;
+            esac
+          else
+            DETECTED_ENV="$PROVIDED_ENV"
+          fi
+          
+          # Detect bump type from branch name if not provided
+          if [ -z "$PROVIDED_BUMP" ]; then
+            case "$HEAD_BRANCH" in
+              "hotfix/"*|"fix/"*)
+                DETECTED_BUMP="patch"
+                ;;
+              "feature/"*|"feat/"*)
+                DETECTED_BUMP="minor"
+                ;;
+              "breaking/"*|"major/"*)
+                DETECTED_BUMP="major"
+                ;;
+              *)
+                DETECTED_BUMP="patch"  # Default fallback
+                ;;
+            esac
+          else
+            DETECTED_BUMP="$PROVIDED_BUMP"
+          fi
+          
+          echo "detected-env=$DETECTED_ENV" >> $GITHUB_OUTPUT
+          echo "final-env=$DETECTED_ENV" >> $GITHUB_OUTPUT
+          echo "final-bump-type=$DETECTED_BUMP" >> $GITHUB_OUTPUT
+          
+          echo "🎯 Final decision:"
+          echo "  Environment: $DETECTED_ENV"
+          echo "  Bump type: $DETECTED_BUMP"
+
+  # Interactive prompt if needed
+  interactive-prompt:
+    if: needs.check-trigger.outputs.environment == '' && needs.check-trigger.outputs.bump-type == ''
+    needs: [check-trigger, check-permissions, get-pr-info]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Comment interactive prompt
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const detectedEnv = '${{ needs.get-pr-info.outputs.detected-env }}';
+            const detectedBump = '${{ needs.get-pr-info.outputs.final-bump-type }}';
+            const baseBranch = '${{ needs.get-pr-info.outputs.base-branch }}';
+            
+            const promptMessage = `## 🎯 Version Bump Configuration
+
+            I detected this configuration based on your target branch (\`${baseBranch}\`):
+            - **Environment**: \`${detectedEnv}\`
+            - **Bump Type**: \`${detectedBump}\`
+
+            ### Options:
+            1. **✅ Proceed with detected settings** - Comment: \`/bump ${detectedEnv} ${detectedBump}\`
+            2. **🔧 Custom environment** - Comment: \`/bump <env> ${detectedBump}\` (where env is \`dev\`, \`qa\`, or \`prd\`)
+            3. **📈 Custom bump type** - Comment: \`/bump ${detectedEnv} <type>\` (where type is \`patch\`, \`minor\`, or \`major\`)
+            4. **🎛️ Full custom** - Comment: \`/bump <env> <type>\`
+            5. **❌ Cancel** - Just ignore this message
+
+            ### Environment Detection Rules:
+            - \`main\`/\`master\` → \`dev\`
+            - \`develop\` → \`dev\`
+            - \`release/*\` → \`qa\`
+            - \`staging\` → \`qa\`
+            - \`production\`/\`prod\` → \`prd\`
+
+            ### Bump Type Detection Rules:
+            - \`hotfix/*\`, \`fix/*\` → \`patch\`
+            - \`feature/*\`, \`feat/*\` → \`minor\`
+            - \`breaking/*\`, \`major/*\` → \`major\`
+
+            💡 **Tip**: Next time, use \`/bump ${detectedEnv} ${detectedBump}\` directly to skip this prompt!
+            `;
+
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: promptMessage
+            });
+
+  # Perform the version bump
+  perform-bump:
+    if: |
+      needs.check-permissions.outputs.authorized == 'true' && 
+      (needs.check-trigger.outputs.environment != '' || needs.check-trigger.outputs.bump-type != '')
+    needs: [check-trigger, check-permissions, get-pr-info]
+    uses: ./.github/workflows/versioning/auto-tag-bump.yml
+    with:
+      environment: ${{ needs.get-pr-info.outputs.final-env }}
+      bump-type: ${{ needs.get-pr-info.outputs.final-bump-type }}
+      dry-run: false
+    secrets: inherit
+
+  # Comment with results
+  comment-result:
+    if: always() && needs.perform-bump.result != 'skipped'
+    needs: [check-trigger, check-permissions, get-pr-info, perform-bump]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Comment success
+        if: needs.perform-bump.result == 'success'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const env = '${{ needs.get-pr-info.outputs.final-env }}';
+            const bumpType = '${{ needs.get-pr-info.outputs.final-bump-type }}';
+            const tag = '${{ needs.perform-bump.outputs.new-tag }}';
+            
+            const successMessage = `## ✅ Version Bump Successful!
+
+            🏷️ **Created Tag**: \`${tag}\`
+            🌍 **Environment**: \`${env}\`
+            📈 **Bump Type**: \`${bumpType}\`
+            🔗 **Release**: [View Release](https://github.com/${context.repo.owner}/${context.repo.repo}/releases/tag/${tag})
+
+            The version has been successfully bumped and is ready for deployment!
+            `;
+
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: successMessage
+            });
+
+      - name: Comment failure
+        if: needs.perform-bump.result == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const env = '${{ needs.get-pr-info.outputs.final-env }}';
+            const bumpType = '${{ needs.get-pr-info.outputs.final-bump-type }}';
+            
+            const failureMessage = `## ❌ Version Bump Failed
+
+            🌍 **Environment**: \`${env}\`
+            📈 **Bump Type**: \`${bumpType}\`
+
+            The version bump failed. Please check the workflow logs for details.
+            
+            You can try again with:
+            - \`/bump ${env} ${bumpType}\` - Retry same configuration
+            - \`/bump ${env} ${bumpType} --force\` - Force overwrite if tag exists
+            - \`/bump help\` - Show help for all options
+            `;
+
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: failureMessage
+            });
+
+  # Handle unauthorized access
+  unauthorized-access:
+    if: needs.check-permissions.outputs.authorized == 'false'
+    needs: [check-trigger, check-permissions]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Comment unauthorized
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const user = context.payload.comment.user.login;
+            
+            const unauthorizedMessage = `## 🚫 Unauthorized Access
+
+            @${user}, you don't have permission to trigger version bumps.
+
+            **Required permissions:**
+            - Be in the allowed users list, OR
+            - Be a member of an allowed team, OR  
+            - Have write access to this repository
+
+            Please contact a repository administrator if you believe this is an error.
+            `;
+
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: unauthorizedMessage
+            });
+
+  # Auto-merge PR if requested and bump was successful
+  auto-merge:
+    if: |
+      inputs.auto-merge-after-bump && 
+      needs.perform-bump.result == 'success'
+    needs: [perform-bump, get-pr-info]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Auto-merge PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            try {
+              await github.rest.pulls.merge({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: ${{ needs.get-pr-info.outputs.pr-number }},
+                commit_title: `Auto-merge after version bump`,
+                commit_message: `Automatically merged after successful version bump to ${{ needs.get-pr-info.outputs.final-env }}`,
+                merge_method: 'squash'
+              });
+              
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: '🚀 **Auto-merged** after successful version bump!'
+              });
+            } catch (error) {
+              console.log(`Failed to auto-merge: ${error.message}`);
+              
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `⚠️ **Auto-merge failed**: ${error.message}\n\nPlease merge manually.`
+              });
+            }

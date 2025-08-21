@@ -1,0 +1,133 @@
+# Example Tag Management Workflows
+# This file demonstrates how consuming repositories can use the DevOps central tag workflows
+
+name: Tag Management Examples
+
+# Example 1: Auto-bump dev tags on PR merge to main
+on:
+  push:
+    branches: [main]
+  # This will automatically create dev-v1.0.1, dev-v1.0.2, etc.
+
+jobs:
+  # Automatically bump dev version when PR is merged to main
+  auto-dev-tag:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    uses: your-org/devops/.github/workflows/pr-auto-tag.yml@main
+    with:
+      target-environment: 'dev'
+      bump-type: 'patch'  # patch for hotfixes, minor for features, major for breaking changes
+      create-release: true
+
+  # Example 2: Manual tag creation with different scenarios
+  manual-qa-tag:
+    if: github.event_name == 'workflow_dispatch'
+    uses: your-org/devops/.github/workflows/manual-tag-bump.yml@main
+    with:
+      environment: 'qa'
+      version: '1.2.3'  # Exact version
+      force: false
+      create-release: true
+
+  # Example 3: Production tagging (requires manual approval)
+  manual-prod-tag:
+    if: github.event_name == 'workflow_dispatch'
+    uses: your-org/devops/.github/workflows/manual-tag-bump.yml@main
+    with:
+      environment: 'prd'
+      version: '1.2.3'
+      force: false
+      create-release: true
+    # This will require approval from production environment reviewers
+
+  # Example 4: Legacy tag bump with auto-versioning
+  legacy-auto-bump:
+    if: github.event_name == 'workflow_dispatch'
+    uses: your-org/devops/.github/workflows/tag-bump.yml@main
+    with:
+      env: 'dev'
+      version: '0.0.0'  # Ignored when auto-bump is true
+      auto-bump: true
+      bump-type: 'minor'
+      force: false
+
+---
+# Example workflow_dispatch inputs for manual workflows
+
+# Create this in your consuming repository as .github/workflows/manual-tag.yml
+name: Manual Tag Creation
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to tag'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - qa
+          - prd
+      version:
+        description: 'Version to tag (e.g., 1.2.3)'
+        required: true
+        type: string
+      force:
+        description: 'Force tag creation (overwrite existing)'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  manual-tag:
+    uses: your-org/devops/.github/workflows/manual-tag-bump.yml@main
+    with:
+      environment: ${{ github.event.inputs.environment }}
+      version: ${{ github.event.inputs.version }}
+      force: ${{ github.event.inputs.force == 'true' }}
+      create-release: true
+
+---
+# Example automatic dev tagging on main branch
+
+name: Auto Dev Tagging
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+jobs:
+  auto-tag-dev:
+    if: github.event_name == 'push' || (github.event.pull_request.merged == true)
+    uses: your-org/devops/.github/workflows/pr-auto-tag.yml@main
+    with:
+      target-environment: 'dev'
+      bump-type: 'patch'  # Change to 'minor' or 'major' as needed
+      create-release: true
+
+---
+# Example release branch workflow
+
+name: Release Branch Workflow
+
+on:
+  push:
+    branches: 
+      - 'release/*'
+  pull_request:
+    types: [closed]
+    branches: 
+      - 'release/*'
+
+jobs:
+  qa-tag:
+    if: github.event_name == 'push' || (github.event.pull_request.merged == true)
+    uses: your-org/devops/.github/workflows/pr-auto-tag.yml@main
+    with:
+      target-environment: 'qa'
+      bump-type: 'minor'  # Release branches typically bump minor version
+      create-release: true

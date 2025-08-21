@@ -1,0 +1,126 @@
+# Complete Example: Full CI/CD Pipeline with Auto-Tagging
+# This demonstrates a complete setup for a consuming repository
+
+name: Complete CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  push:
+    tags:
+      - 'dev-v*'
+      - 'qa-v*'
+      - 'prd-v*'
+
+jobs:
+  # Run CI on every push and PR
+  ci:
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    uses: your-org/devops/.github/workflows/ci.yml@main
+    with:
+      node-version: '18'
+      pnpm-version: '8'
+      run-tests: true
+      run-lint: true
+      run-build: true
+      run-security-audit: true
+
+  # Auto-tag dev when pushing to main
+  auto-tag-dev:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: ci
+    uses: your-org/devops/.github/workflows/pr-auto-tag.yml@main
+    with:
+      target-environment: 'dev'
+      bump-type: 'patch'
+      create-release: true
+
+  # Auto-tag qa when pushing to develop
+  auto-tag-qa:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    needs: ci
+    uses: your-org/devops/.github/workflows/pr-auto-tag.yml@main
+    with:
+      target-environment: 'qa'
+      bump-type: 'minor'
+      create-release: true
+
+  # Deploy when tags are created
+  deploy:
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    uses: your-org/devops/.github/workflows/deploy.yml@main
+    with:
+      tag: ${{ github.ref_name }}
+      node-version: '18'
+      pnpm-version: '8'
+
+---
+# Separate workflow for manual production tagging
+# File: .github/workflows/production-release.yml
+
+name: Production Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Production version (e.g., 1.2.3)'
+        required: true
+        type: string
+      create-release:
+        description: 'Create GitHub release'
+        required: false
+        default: true
+        type: boolean
+
+jobs:
+  production-tag:
+    uses: your-org/devops/.github/workflows/manual-tag-bump.yml@main
+    with:
+      environment: 'prd'
+      version: ${{ github.event.inputs.version }}
+      create-release: ${{ github.event.inputs.create-release }}
+    # This will require manual approval from the production-tag-bump environment
+
+  production-deploy:
+    needs: production-tag
+    uses: your-org/devops/.github/workflows/deploy.yml@main
+    with:
+      tag: ${{ needs.production-tag.outputs.tag-created }}
+      node-version: '18'
+      pnpm-version: '8'
+
+---
+# Additional workflow for emergency hotfixes
+# File: .github/workflows/hotfix.yml
+
+name: Hotfix Release
+
+on:
+  push:
+    branches: ['hotfix/*']
+
+jobs:
+  ci:
+    uses: your-org/devops/.github/workflows/ci.yml@main
+    with:
+      node-version: '18'
+      pnpm-version: '8'
+
+  emergency-tag:
+    needs: ci
+    uses: your-org/devops/.github/workflows/auto-tag-bump.yml@main
+    with:
+      bump-type: 'patch'
+      environment: 'dev'
+      dry-run: false
+
+  deploy-dev:
+    needs: emergency-tag
+    uses: your-org/devops/.github/workflows/deploy.yml@main
+    with:
+      tag: ${{ needs.emergency-tag.outputs.new-tag }}
+      node-version: '18'
+      pnpm-version: '8'

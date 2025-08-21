@@ -1,0 +1,76 @@
+# DevOps Central Configuration Defaults
+# This file contains default values used across all workflows
+
+# Node.js and Package Manager Defaults
+node:
+  default_version: "18"
+  supported_versions: ["16", "18", "20", "21"]
+  
+pnpm:
+  default_version: "8"
+  supported_versions: ["7", "8", "9"]
+
+# Environment Configuration
+environments:
+  development:
+    name: "dev"
+    auto_deploy: true
+    approval_required: false
+    auto_tagging: true
+    default_bump_type: "patch"
+  
+  staging:
+    name: "qa" 
+    auto_deploy: false
+    approval_required: false
+    auto_tagging: true
+    default_bump_type: "minor"
+    
+  production:
+    name: "prd"
+    auto_deploy: false
+    approval_required: true
+    auto_tagging: false
+    default_bump_type: "major"
+    environment_name: "production-tag-bump"
+
+# Workflow Defaults
+workflows:
+  ci:
+    timeout_minutes: 30
+    default_runs_on: "ubuntu-latest"
+    cache_enabled: true
+    
+  deployment:
+    timeout_minutes: 45
+    requires_tag: true
+    
+  versioning:
+    timeout_minutes: 15
+    semantic_versioning: true
+    create_release_notes: true
+
+# Security Settings
+security:
+  force_approval_for_production: true
+  require_signed_commits: false
+  vulnerability_scan: true
+  dependency_audit: true
+
+# Cache Configuration  
+cache:
+  node_modules: true
+  pnpm_store: true
+  dependency_cache_ttl: "1d"
+  
+# Notification Settings
+notifications:
+  slack:
+    enabled: false
+    webhook_url: ""
+  email:
+    enabled: false
+    recipients: []
+  github:
+    enabled: true
+    create_releases: true

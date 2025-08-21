@@ -1,0 +1,35 @@
+# Example workflow for consuming repositories
+# This file demonstrates how to use the DevOps central workflows
+
+name: Example Consumer Workflow
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  # Run the full CI pipeline
+  ci:
+    uses: your-org/devops/.github/workflows/ci.yml@main
+    with:
+      node-version: '18'
+      pnpm-version: '8'
+      run-tests: true
+      run-lint: true
+      run-build: true
+      run-security-audit: true
+
+  # Or run individual workflows
+  test-only:
+    uses: your-org/devops/.github/workflows/test.yml@main
+    with:
+      node-version: '18'
+      pnpm-version: '8'
+
+  lint-only:
+    uses: your-org/devops/.github/workflows/lint-checker.yml@main
+    with:
+      node-version: '18'
+      pnpm-version: '8'

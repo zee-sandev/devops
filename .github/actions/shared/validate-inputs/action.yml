@@ -1,0 +1,103 @@
+name: 'Validate Common Inputs'
+description: 'Validate common workflow inputs like environment, version, etc.'
+
+inputs:
+  environment:
+    description: 'Environment to validate (dev, qa, prd)'
+    required: false
+    default: ''
+  version:
+    description: 'Version to validate (semantic versioning)'
+    required: false
+    default: ''
+  node-version:
+    description: 'Node.js version to validate'
+    required: false
+    default: ''
+  pnpm-version:
+    description: 'pnpm version to validate'
+    required: false
+    default: ''
+
+outputs:
+  environment-valid:
+    description: 'Whether environment is valid'
+    value: ${{ steps.validate.outputs.environment-valid }}
+  version-valid:
+    description: 'Whether version is valid'
+    value: ${{ steps.validate.outputs.version-valid }}
+  is-production:
+    description: 'Whether environment is production'
+    value: ${{ steps.validate.outputs.is-production }}
+
+runs:
+  using: composite
+  steps:
+    - name: Validate inputs
+      id: validate
+      shell: bash
+      run: |
+        ENV="${{ inputs.environment }}"
+        VERSION="${{ inputs.version }}"
+        NODE_VERSION="${{ inputs.node-version }}"
+        PNPM_VERSION="${{ inputs.pnpm-version }}"
+        
+        ENV_VALID="false"
+        VERSION_VALID="false"
+        IS_PRODUCTION="false"
+        
+        # Validate environment
+        if [ -n "$ENV" ]; then
+          case $ENV in
+            "dev"|"qa"|"prd")
+              echo "✅ Valid environment: $ENV"
+              ENV_VALID="true"
+              if [ "$ENV" = "prd" ]; then
+                IS_PRODUCTION="true"
+              fi
+              ;;
+            *)
+              echo "❌ Invalid environment: $ENV. Must be dev, qa, or prd"
+              exit 1
+              ;;
+          esac
+        else
+          ENV_VALID="true"  # Empty is valid (optional)
+        fi
+        
+        # Validate version (semantic versioning)
+        if [ -n "$VERSION" ]; then
+          if [[ $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "✅ Valid semantic version: $VERSION"
+            VERSION_VALID="true"
+          else
+            echo "❌ Invalid version format: $VERSION. Must be semantic version (e.g., 1.2.3)"
+            exit 1
+          fi
+        else
+          VERSION_VALID="true"  # Empty is valid (optional)
+        fi
+        
+        # Validate Node.js version
+        if [ -n "$NODE_VERSION" ]; then
+          if [[ $NODE_VERSION =~ ^[0-9]+$ ]] || [[ $NODE_VERSION =~ ^[0-9]+\.[0-9]+$ ]] || [[ $NODE_VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "✅ Valid Node.js version: $NODE_VERSION"
+          else
+            echo "❌ Invalid Node.js version: $NODE_VERSION"
+            exit 1
+          fi
+        fi
+        
+        # Validate pnpm version
+        if [ -n "$PNPM_VERSION" ]; then
+          if [[ $PNPM_VERSION =~ ^[0-9]+$ ]] || [[ $PNPM_VERSION =~ ^[0-9]+\.[0-9]+$ ]] || [[ $PNPM_VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "✅ Valid pnpm version: $PNPM_VERSION"
+          else
+            echo "❌ Invalid pnpm version: $PNPM_VERSION"
+            exit 1
+          fi
+        fi
+        
+        echo "environment-valid=$ENV_VALID" >> $GITHUB_OUTPUT
+        echo "version-valid=$VERSION_VALID" >> $GITHUB_OUTPUT
+        echo "is-production=$IS_PRODUCTION" >> $GITHUB_OUTPUT

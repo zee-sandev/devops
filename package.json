@@ -1,0 +1,41 @@
+{
+  "name": "devops-central",
+  "version": "2.0.0",
+  "description": "Enterprise-ready DevOps platform with modular workflows, shared actions, and comprehensive automation for Node.js and pnpm projects",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"No tests specified\" && exit 0",
+    "lint": "echo \"No linting specified\" && exit 0", 
+    "build": "echo \"No build specified\" && exit 0",
+    "deploy": "echo \"No deploy specified\" && exit 0",
+    "docs": "echo \"Documentation is in docs/ directory\"",
+    "validate": "./scripts/validate-workflows.sh",
+    "validate:yaml": "yamllint .github/",
+    "validate:shell": "shellcheck scripts/*.sh"
+  },
+  "keywords": [
+    "devops",
+    "github-actions",
+    "workflows",
+    "nodejs",
+    "pnpm",
+    "ci-cd",
+    "automation"
+  ],
+  "author": "DevOps Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/your-org/devops.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-org/devops/issues"
+  },
+  "homepage": "https://github.com/your-org/devops#readme",
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "devDependencies": {},
+  "dependencies": {}
+}

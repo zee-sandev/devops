@@ -1,0 +1,120 @@
+name: PR Auto Tag
+
+on:
+  workflow_call:
+    inputs:
+      target-environment:
+        description: 'Environment to auto-tag for (dev, qa)'
+        required: false
+        default: 'dev'
+        type: string
+      bump-type:
+        description: 'Type of version bump (patch, minor, major)'
+        required: false
+        default: 'patch'
+        type: string
+      skip-if-exists:
+        description: 'Skip tagging if tag already exists'
+        required: false
+        default: true
+        type: boolean
+      create-release:
+        description: 'Create GitHub release after tagging'
+        required: false
+        default: false
+        type: boolean
+    outputs:
+      tag-created:
+        description: 'The tag that was created (if any)'
+        value: ${{ jobs.auto-tag.outputs.tag-created }}
+      skipped:
+        description: 'Whether tagging was skipped'
+        value: ${{ jobs.auto-tag.outputs.skipped }}
+
+jobs:
+  auto-tag:
+    runs-on: ubuntu-latest
+    outputs:
+      tag-created: ${{ steps.tag.outputs.tag-created }}
+      skipped: ${{ steps.tag.outputs.skipped }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for tags
+
+      - name: Validate environment
+        run: |
+          ENV="${{ inputs.target-environment }}"
+          
+          # Only allow dev and qa for auto-tagging (production should be manual)
+          case $ENV in
+            "dev"|"qa")
+              echo "✅ Valid environment for auto-tagging: $ENV"
+              ;;
+            "prd"|"production")
+              echo "❌ Production tagging should be done manually for safety"
+              exit 1
+              ;;
+            *)
+              echo "❌ Invalid environment: $ENV. Must be dev or qa"
+              exit 1
+              ;;
+          esac
+
+      - name: Auto-bump tag
+        id: tag
+        uses: ./.github/workflows/auto-tag-bump.yml
+        with:
+          bump-type: ${{ inputs.bump-type }}
+          environment: ${{ inputs.target-environment }}
+          dry-run: false
+
+      - name: Check if tag creation was successful
+        run: |
+          TAG_CREATED="${{ steps.tag.outputs.new-tag }}"
+          
+          if [ -n "$TAG_CREATED" ]; then
+            echo "✅ Successfully created tag: $TAG_CREATED"
+            echo "🚀 This will trigger deployment workflows"
+          else
+            echo "⚠️ No tag was created"
+          fi
+
+      - name: Create GitHub Release
+        if: ${{ inputs.create-release && steps.tag.outputs.new-tag }}
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.tag.outputs.new-tag }}
+          release_name: "Auto Release ${{ steps.tag.outputs.new-tag }}"
+          body: |
+            ## Auto-generated release for ${{ inputs.target-environment }}
+            
+            **Environment:** ${{ inputs.target-environment }}
+            **Bump Type:** ${{ inputs.bump-type }}
+            **Previous Tag:** ${{ steps.tag.outputs.previous-tag }}
+            **New Tag:** ${{ steps.tag.outputs.new-tag }}
+            **Created:** ${{ github.event.head_commit.timestamp }}
+            **Commit:** ${{ github.sha }}
+            
+            ### Latest Changes
+            - ${{ github.event.head_commit.message }}
+            
+            This release was automatically created from a merged PR.
+          draft: false
+          prerelease: ${{ inputs.target-environment != 'qa' }}
+
+      - name: Summary
+        run: |
+          echo "## 🏷️ Auto-Tag Summary"
+          echo "| Field | Value |"
+          echo "|-------|-------|"
+          echo "| Environment | ${{ inputs.target-environment }} |"
+          echo "| Bump Type | ${{ inputs.bump-type }} |"
+          echo "| Tag Created | ${{ steps.tag.outputs.new-tag || 'None' }} |"
+          echo "| Previous Tag | ${{ steps.tag.outputs.previous-tag || 'None' }} |"
+          echo "| Release Created | ${{ inputs.create-release }} |"
+          echo "| Triggered By | PR Merge |"
+          echo "| Commit | ${{ github.sha }} |"
