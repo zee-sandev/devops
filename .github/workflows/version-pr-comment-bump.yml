@@ -376,7 +376,7 @@ jobs:
       needs.check-permissions.outputs.authorized == 'true' && 
       (needs.check-trigger.outputs.environment != '' || needs.check-trigger.outputs.bump-type != '')
     needs: [check-trigger, check-permissions, get-pr-info]
-    uses: ./.github/workflows/versioning/auto-tag-bump.yml
+    uses: ./.github/workflows/version-auto-bump.yml
     with:
       environment: ${{ needs.get-pr-info.outputs.final-env }}
       bump-type: ${{ needs.get-pr-info.outputs.final-bump-type }}

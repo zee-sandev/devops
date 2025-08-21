@@ -56,16 +56,16 @@ jobs:
       pnpm-version: '8'
 ```
 
-### 🔄 CI Workflows (`ci/`)
+### 🔄 CI Workflows
 
-#### CI Pipeline (`ci/ci.yml`)
+#### CI Pipeline (`ci-pipeline.yml`)
 
 Comprehensive CI pipeline with configurable steps.
 
 ```yaml
 jobs:
   ci:
-    uses: zee-sandev/devops/.github/workflows/ci/ci.yml@main
+    uses: zee-sandev/devops/.github/workflows/ci-pipeline.yml@main
     with:
       node-version: '18'
       pnpm-version: '8'
@@ -77,12 +77,12 @@ jobs:
 
 #### Individual Components
 
-- **`test.yml`**: Standalone testing workflow
-- **`lint-checker.yml`**: Code quality and linting checks
+- **`ci-test.yml`**: Standalone testing workflow
+- **`ci-lint.yml`**: Code quality and linting checks
 
-### 🚀 Deployment Workflows (`deployment/`)
+### 🚀 Deployment Workflows
 
-#### Deploy (`deployment/deploy.yml`)
+#### Deploy (`deploy.yml`)
 
 Tag-based deployment with automatic environment detection.
 
@@ -94,44 +94,44 @@ on:
 
 jobs:
   deploy:
-    uses: zee-sandev/devops/.github/workflows/deployment/deploy.yml@main
+    uses: zee-sandev/devops/.github/workflows/deploy.yml@main
     with:
       tag: ${{ github.ref_name }}
       node-version: '18'
       pnpm-version: '8'
 ```
 
-### 🏷️ Versioning Workflows (`versioning/`)
+### 🏷️ Versioning Workflows
 
-#### Auto Tag Bump (`versioning/auto-tag-bump.yml`)
+#### Auto Tag Bump (`version-auto-bump.yml`)
 
 Automatically calculate and create next version tags.
 
 ```yaml
 jobs:
   auto-tag:
-    uses: zee-sandev/devops/.github/workflows/versioning/auto-tag-bump.yml@main
+    uses: zee-sandev/devops/.github/workflows/version-auto-bump.yml@main
     with:
       bump-type: 'patch' # patch, minor, major
       environment: 'dev' # dev, qa, prd
       dry-run: false # Set true for testing
 ```
 
-#### Manual Tag Bump (`versioning/manual-tag-bump.yml`)
+#### Manual Tag Bump (`version-manual-bump.yml`)
 
 Manual tagging with production approval workflow.
 
 ```yaml
 jobs:
   manual-tag:
-    uses: zee-sandev/devops/.github/workflows/versioning/manual-tag-bump.yml@main
+    uses: zee-sandev/devops/.github/workflows/version-manual-bump.yml@main
     with:
       environment: 'prd' # dev, qa, prd
       version: '1.2.3' # Exact version
       create-release: true # Create GitHub release
 ```
 
-#### PR Auto Tag (`versioning/pr-auto-tag.yml`)
+#### PR Auto Tag (`version-pr-auto-tag.yml`)
 
 Automatic tagging when PRs are merged.
 
@@ -143,21 +143,21 @@ on:
 
 jobs:
   auto-tag:
-    uses: zee-sandev/devops/.github/workflows/versioning/pr-auto-tag.yml@main
+    uses: zee-sandev/devops/.github/workflows/version-pr-auto-tag.yml@main
     with:
       target-environment: 'dev'
       bump-type: 'patch'
       create-release: true
 ```
 
-#### Enhanced Tag Bump (`versioning/tag-bump.yml`)
+#### Enhanced Tag Bump (`version-tag-bump.yml`)
 
 Legacy workflow with enhanced features and backward compatibility.
 
 ```yaml
 jobs:
   tag-bump:
-    uses: zee-sandev/devops/.github/workflows/versioning/tag-bump.yml@main
+    uses: zee-sandev/devops/.github/workflows/version-tag-bump.yml@main
     with:
       env: 'dev'
       version: '1.0.0' # Ignored if auto-bump is true
@@ -165,7 +165,7 @@ jobs:
       bump-type: 'patch'
 ```
 
-#### PR Comment Bump (`versioning/pr-comment-bump.yml`) 🆕
+#### PR Comment Bump (`version-pr-comment-bump.yml`) 🆕
 
 Interactive version bumping through PR comments with smart detection.
 
@@ -179,7 +179,7 @@ on:
 jobs:
   pr-commands:
     if: github.event.issue.pull_request
-    uses: zee-sandev/devops/.github/workflows/versioning/pr-comment-bump.yml@main
+    uses: zee-sandev/devops/.github/workflows/version-pr-comment-bump.yml@main
     with:
       allowed-teams: 'devops-team,release-managers'
       auto-merge-after-bump: false
@@ -264,7 +264,7 @@ on: [push, pull_request]
 
 jobs:
   ci:
-    uses: zee-sandev/devops/.github/workflows/ci/ci.yml@main
+    uses: zee-sandev/devops/.github/workflows/ci-pipeline.yml@main
     with:
       node-version: '18'
       pnpm-version: '8'
@@ -281,7 +281,7 @@ on:
 
 jobs:
   auto-tag:
-    uses: zee-sandev/devops/.github/workflows/versioning/pr-auto-tag.yml@main
+    uses: zee-sandev/devops/.github/workflows/version-pr-auto-tag.yml@main
     with:
       target-environment: 'dev'
       bump-type: 'patch'
@@ -300,7 +300,7 @@ on:
 
 jobs:
   ci:
-    uses: zee-sandev/devops/.github/workflows/ci/ci.yml@main
+    uses: zee-sandev/devops/.github/workflows/ci-pipeline.yml@main
     with:
       node-version: '18'
       pnpm-version: '8'
@@ -308,7 +308,7 @@ jobs:
   auto-tag:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: ci
-    uses: zee-sandev/devops/.github/workflows/versioning/pr-auto-tag.yml@main
+    uses: zee-sandev/devops/.github/workflows/version-pr-auto-tag.yml@main
     with:
       target-environment: 'dev'
       bump-type: 'patch'

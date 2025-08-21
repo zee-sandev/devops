@@ -106,7 +106,7 @@ jobs:
   ci:
     if: ${{ needs.validate.outputs.workflow-type == 'ci' }}
     needs: validate
-    uses: ./.github/workflows/ci/ci.yml
+    uses: ./.github/workflows/ci-pipeline.yml
     with:
       node-version: ${{ inputs.node-version }}
       pnpm-version: ${{ inputs.pnpm-version }}
@@ -119,7 +119,7 @@ jobs:
   deploy:
     if: ${{ needs.validate.outputs.workflow-type == 'deploy' }}
     needs: validate
-    uses: ./.github/workflows/deployment/deploy.yml
+    uses: ./.github/workflows/deploy.yml
     with:
       tag: ${{ inputs.tag }}
       node-version: ${{ inputs.node-version }}
@@ -129,7 +129,7 @@ jobs:
   auto-tag:
     if: ${{ needs.validate.outputs.workflow-type == 'tag-auto' }}
     needs: validate
-    uses: ./.github/workflows/versioning/auto-tag-bump.yml
+    uses: ./.github/workflows/version-auto-bump.yml
     with:
       bump-type: ${{ inputs.bump-type }}
       environment: ${{ inputs.environment }}
@@ -139,7 +139,7 @@ jobs:
   manual-tag:
     if: ${{ needs.validate.outputs.workflow-type == 'tag-manual' }}
     needs: validate
-    uses: ./.github/workflows/versioning/manual-tag-bump.yml
+    uses: ./.github/workflows/version-manual-bump.yml
     with:
       environment: ${{ inputs.environment }}
       version: ${{ inputs.version }}

@@ -11,7 +11,7 @@ jobs:
   # Basic setup - anyone with write access can bump versions
   basic-bump:
     if: github.event.issue.pull_request
-    uses: zee-sandev/devops/.github/workflows/versioning/pr-comment-bump.yml@main
+    uses: zee-sandev/devops/.github/workflows/version-pr-comment-bump.yml@main
     secrets: inherit
 
 ---
@@ -26,7 +26,7 @@ jobs:
   # Advanced setup - only specific users and teams can bump versions
   advanced-bump:
     if: github.event.issue.pull_request
-    uses: zee-sandev/devops/.github/workflows/versioning/pr-comment-bump.yml@main
+    uses: zee-sandev/devops/.github/workflows/version-pr-comment-bump.yml@main
     with:
       allowed-users: 'alice,bob,charlie'                    # Specific users
       allowed-teams: 'devops-team,release-managers'         # GitHub teams
@@ -45,7 +45,7 @@ on:
 jobs:
   version-bump:
     if: github.event.issue.pull_request
-    uses: zee-sandev/devops/.github/workflows/versioning/pr-comment-bump.yml@main
+    uses: zee-sandev/devops/.github/workflows/version-pr-comment-bump.yml@main
     with:
       allowed-teams: 'release-team,devops'
       require-approval: true

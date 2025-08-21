@@ -115,7 +115,7 @@ This release represents a complete reorganization and refactoring of the DevOps 
 uses: zee-sandev/devops/.github/workflows/ci.yml@main
 
 # New (V2)
-uses: zee-sandev/devops/.github/workflows/ci/ci.yml@main
+uses: zee-sandev/devops/.github/workflows/ci-pipeline.yml@main
 ```
 
 **New Main Coordinator (Recommended):**

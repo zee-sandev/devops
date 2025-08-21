@@ -18,7 +18,7 @@ jobs:
   # Run CI on every push and PR
   ci:
     if: github.event_name == 'push' || github.event_name == 'pull_request'
-    uses: zee-sandev/devops/.github/workflows/ci.yml@main
+    uses: zee-sandev/devops/.github/workflows/ci-pipeline.yml@main
     with:
       node-version: '18'
       pnpm-version: '8'
@@ -31,7 +31,7 @@ jobs:
   auto-tag-dev:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: ci
-    uses: zee-sandev/devops/.github/workflows/pr-auto-tag.yml@main
+    uses: zee-sandev/devops/.github/workflows/version-pr-auto-tag.yml@main
     with:
       target-environment: 'dev'
       bump-type: 'patch'
@@ -41,7 +41,7 @@ jobs:
   auto-tag-qa:
     if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
     needs: ci
-    uses: zee-sandev/devops/.github/workflows/pr-auto-tag.yml@main
+    uses: zee-sandev/devops/.github/workflows/version-pr-auto-tag.yml@main
     with:
       target-environment: 'qa'
       bump-type: 'minor'
@@ -77,7 +77,7 @@ on:
 
 jobs:
   production-tag:
-    uses: zee-sandev/devops/.github/workflows/manual-tag-bump.yml@main
+    uses: zee-sandev/devops/.github/workflows/version-manual-bump.yml@main
     with:
       environment: 'prd'
       version: ${{ github.event.inputs.version }}
@@ -104,14 +104,14 @@ on:
 
 jobs:
   ci:
-    uses: zee-sandev/devops/.github/workflows/ci.yml@main
+    uses: zee-sandev/devops/.github/workflows/ci-pipeline.yml@main
     with:
       node-version: '18'
       pnpm-version: '8'
 
   emergency-tag:
     needs: ci
-    uses: zee-sandev/devops/.github/workflows/auto-tag-bump.yml@main
+    uses: zee-sandev/devops/.github/workflows/version-auto-bump.yml@main
     with:
       bump-type: 'patch'
       environment: 'dev'

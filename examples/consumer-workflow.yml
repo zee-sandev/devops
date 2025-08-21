@@ -12,7 +12,7 @@ on:
 jobs:
   # Run the full CI pipeline
   ci:
-    uses: zee-sandev/devops/.github/workflows/ci.yml@main
+    uses: zee-sandev/devops/.github/workflows/ci-pipeline.yml@main
     with:
       node-version: '18'
       pnpm-version: '8'
@@ -23,13 +23,13 @@ jobs:
 
   # Or run individual workflows
   test-only:
-    uses: zee-sandev/devops/.github/workflows/test.yml@main
+    uses: zee-sandev/devops/.github/workflows/ci-test.yml@main
     with:
       node-version: '18'
       pnpm-version: '8'
 
   lint-only:
-    uses: zee-sandev/devops/.github/workflows/lint-checker.yml@main
+    uses: zee-sandev/devops/.github/workflows/ci-lint.yml@main
     with:
       node-version: '18'
       pnpm-version: '8'
