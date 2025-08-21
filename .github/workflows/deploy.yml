@@ -1,0 +1,61 @@
+name: Deploy
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: 'Tag to deploy (e.g., dev-v1.2.3, qa-v1.2.3, prd-v1.2.3)'
+        required: true
+        type: string
+      node-version:
+        description: 'Node.js version to use'
+        required: false
+        default: '18'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ steps.set-env.outputs.env }}
+      # For production, require manual approval in the environment settings
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set deployment environment
+        id: set-env
+        run: |
+          TAG="${{ inputs.tag }}"
+          if [[ "$TAG" == dev-v* ]]; then
+            echo "env=dev" >> $GITHUB_OUTPUT
+          elif [[ "$TAG" == qa-v* ]]; then
+            echo "env=staging" >> $GITHUB_OUTPUT
+          elif [[ "$TAG" == prd-v* ]]; then
+            echo "env=production" >> $GITHUB_OUTPUT
+          else
+            echo "Unknown tag pattern: $TAG"
+            exit 1
+          fi
+
+      - name: Use Node.js ${{ inputs.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node-version }}
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Deploy with pnpm
+        run: |
+          ENV="${{ steps.set-env.outputs.env }}"
+          if pnpm run | grep -q "deploy"; then
+            pnpm run deploy -- --env "$ENV"
+          else
+            echo "No deploy script found in package.json"
+            exit 1
+          fi

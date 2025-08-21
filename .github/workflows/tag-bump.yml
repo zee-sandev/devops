@@ -1,0 +1,48 @@
+name: Tag Bump
+
+on:
+  workflow_call:
+    inputs:
+      env:
+        description: 'Environment to bump tag for'
+        required: true
+        type: string
+        default: dev
+        options:
+          - dev
+          - qa
+          - prd
+      version:
+        description: 'Version to bump to (e.g., 1.2.3)'
+        required: true
+        type: string
+
+jobs:
+  bump-tag:
+    runs-on: ubuntu-latest
+    environment:
+      name: tag-bump
+      # This requires an environment named "tag-bump" in your repo with required reviewers set
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Git user
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Determine tag name
+        id: tagname
+        run: |
+          ENV_LOWER=$(echo "${{ inputs.env }}" | tr '[:upper:]' '[:lower:]')
+          TAG="${ENV_LOWER}-v${{ inputs.version }}"
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Create or update tag
+        run: |
+          TAG_NAME="${{ steps.tagname.outputs.tag }}"
+          git tag -f "$TAG_NAME"
+          git push origin "$TAG_NAME" --force
+
+
