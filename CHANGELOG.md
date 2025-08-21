@@ -112,17 +112,17 @@ This release represents a complete reorganization and refactoring of the DevOps 
 
 ```yaml
 # Old (V1)
-uses: your-org/devops/.github/workflows/ci.yml@main
+uses: zee-sandev/devops/.github/workflows/ci.yml@main
 
 # New (V2)
-uses: your-org/devops/.github/workflows/ci/ci.yml@main
+uses: zee-sandev/devops/.github/workflows/ci/ci.yml@main
 ```
 
 **New Main Coordinator (Recommended):**
 
 ```yaml
 # V2 - Use main coordinator
-uses: your-org/devops/.github/workflows/main.yml@main
+uses: zee-sandev/devops/.github/workflows/main.yml@main
 with:
   workflow-type: 'ci'
 ```

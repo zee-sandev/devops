@@ -48,7 +48,7 @@ on: [push, pull_request]
 
 jobs:
   main:
-    uses: your-org/devops/.github/workflows/main.yml@main
+    uses: zee-sandev/devops/.github/workflows/main.yml@main
     with:
       workflow-type: 'ci' # ci, deploy, tag-auto, tag-manual
       environment: 'dev' # dev, qa, prd
@@ -65,7 +65,7 @@ Comprehensive CI pipeline with configurable steps.
 ```yaml
 jobs:
   ci:
-    uses: your-org/devops/.github/workflows/ci/ci.yml@main
+    uses: zee-sandev/devops/.github/workflows/ci/ci.yml@main
     with:
       node-version: '18'
       pnpm-version: '8'
@@ -94,7 +94,7 @@ on:
 
 jobs:
   deploy:
-    uses: your-org/devops/.github/workflows/deployment/deploy.yml@main
+    uses: zee-sandev/devops/.github/workflows/deployment/deploy.yml@main
     with:
       tag: ${{ github.ref_name }}
       node-version: '18'
@@ -110,7 +110,7 @@ Automatically calculate and create next version tags.
 ```yaml
 jobs:
   auto-tag:
-    uses: your-org/devops/.github/workflows/versioning/auto-tag-bump.yml@main
+    uses: zee-sandev/devops/.github/workflows/versioning/auto-tag-bump.yml@main
     with:
       bump-type: 'patch' # patch, minor, major
       environment: 'dev' # dev, qa, prd
@@ -124,7 +124,7 @@ Manual tagging with production approval workflow.
 ```yaml
 jobs:
   manual-tag:
-    uses: your-org/devops/.github/workflows/versioning/manual-tag-bump.yml@main
+    uses: zee-sandev/devops/.github/workflows/versioning/manual-tag-bump.yml@main
     with:
       environment: 'prd' # dev, qa, prd
       version: '1.2.3' # Exact version
@@ -143,7 +143,7 @@ on:
 
 jobs:
   auto-tag:
-    uses: your-org/devops/.github/workflows/versioning/pr-auto-tag.yml@main
+    uses: zee-sandev/devops/.github/workflows/versioning/pr-auto-tag.yml@main
     with:
       target-environment: 'dev'
       bump-type: 'patch'
@@ -157,7 +157,7 @@ Legacy workflow with enhanced features and backward compatibility.
 ```yaml
 jobs:
   tag-bump:
-    uses: your-org/devops/.github/workflows/versioning/tag-bump.yml@main
+    uses: zee-sandev/devops/.github/workflows/versioning/tag-bump.yml@main
     with:
       env: 'dev'
       version: '1.0.0' # Ignored if auto-bump is true
@@ -179,7 +179,7 @@ on:
 jobs:
   pr-commands:
     if: github.event.issue.pull_request
-    uses: your-org/devops/.github/workflows/versioning/pr-comment-bump.yml@main
+    uses: zee-sandev/devops/.github/workflows/versioning/pr-comment-bump.yml@main
     with:
       allowed-teams: 'devops-team,release-managers'
       auto-merge-after-bump: false
@@ -206,7 +206,7 @@ Reusable Node.js and pnpm setup with caching.
 
 ```yaml
 - name: Setup Node.js and pnpm
-  uses: your-org/devops/.github/actions/setup@main
+  uses: zee-sandev/devops/.github/actions/setup@main
   with:
     node-version: '18'
     pnpm-version: '8'
@@ -218,7 +218,7 @@ Reusable Node.js and pnpm setup with caching.
 
 ```yaml
 - name: Validate inputs
-  uses: your-org/devops/.github/actions/shared/validate-inputs@main
+  uses: zee-sandev/devops/.github/actions/shared/validate-inputs@main
   with:
     environment: 'dev'
     version: '1.2.3'
@@ -228,7 +228,7 @@ Reusable Node.js and pnpm setup with caching.
 
 ```yaml
 - name: Setup Git
-  uses: your-org/devops/.github/actions/shared/git-setup@main
+  uses: zee-sandev/devops/.github/actions/shared/git-setup@main
   with:
     fetch-depth: 0
 ```
@@ -237,7 +237,7 @@ Reusable Node.js and pnpm setup with caching.
 
 ```yaml
 - name: Calculate next version
-  uses: your-org/devops/.github/actions/shared/version-calculator@main
+  uses: zee-sandev/devops/.github/actions/shared/version-calculator@main
   with:
     environment: 'dev'
     bump-type: 'patch'
@@ -247,7 +247,7 @@ Reusable Node.js and pnpm setup with caching.
 
 ```yaml
 - name: Create tag
-  uses: your-org/devops/.github/actions/shared/create-tag@main
+  uses: zee-sandev/devops/.github/actions/shared/create-tag@main
   with:
     tag-name: 'dev-v1.2.3'
     force: false
@@ -264,7 +264,7 @@ on: [push, pull_request]
 
 jobs:
   ci:
-    uses: your-org/devops/.github/workflows/ci/ci.yml@main
+    uses: zee-sandev/devops/.github/workflows/ci/ci.yml@main
     with:
       node-version: '18'
       pnpm-version: '8'
@@ -281,7 +281,7 @@ on:
 
 jobs:
   auto-tag:
-    uses: your-org/devops/.github/workflows/versioning/pr-auto-tag.yml@main
+    uses: zee-sandev/devops/.github/workflows/versioning/pr-auto-tag.yml@main
     with:
       target-environment: 'dev'
       bump-type: 'patch'
@@ -300,7 +300,7 @@ on:
 
 jobs:
   ci:
-    uses: your-org/devops/.github/workflows/ci/ci.yml@main
+    uses: zee-sandev/devops/.github/workflows/ci/ci.yml@main
     with:
       node-version: '18'
       pnpm-version: '8'
@@ -308,7 +308,7 @@ jobs:
   auto-tag:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: ci
-    uses: your-org/devops/.github/workflows/versioning/pr-auto-tag.yml@main
+    uses: zee-sandev/devops/.github/workflows/versioning/pr-auto-tag.yml@main
     with:
       target-environment: 'dev'
       bump-type: 'patch'
@@ -400,7 +400,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Note**: Replace `your-org/devops` with your actual organization and repository names in all examples.
+**Note**: Replace `zee-sandev/devops` with your actual organization and repository names in all examples.
 
 ## 🎉 What's New in V2
 

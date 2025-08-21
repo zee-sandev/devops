@@ -12,7 +12,7 @@ on:
 
 jobs:
   deploy:
-    uses: your-org/devops/.github/workflows/deploy.yml@main
+    uses: zee-sandev/devops/.github/workflows/deploy.yml@main
     with:
       tag: ${{ github.ref_name }}
       node-version: '18'

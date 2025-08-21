@@ -26,12 +26,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/your-org/devops.git"
+    "url": "git+https://github.com/zee-sandev/devops.git"
   },
   "bugs": {
-    "url": "https://github.com/your-org/devops/issues"
+    "url": "https://github.com/zee-sandev/devops/issues"
   },
-  "homepage": "https://github.com/your-org/devops#readme",
+  "homepage": "https://github.com/zee-sandev/devops#readme",
   "engines": {
     "node": ">=18.0.0",
     "pnpm": ">=8.0.0"

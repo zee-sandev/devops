@@ -32,7 +32,7 @@ Automatically calculates the next version based on the latest tag and bump type.
 ```yaml
 jobs:
   auto-bump:
-    uses: your-org/devops/.github/workflows/auto-tag-bump.yml@main
+    uses: zee-sandev/devops/.github/workflows/auto-tag-bump.yml@main
     with:
       bump-type: 'patch' # patch, minor, or major
       environment: 'dev' # dev, qa, prd
@@ -57,7 +57,7 @@ Allows explicit version specification with production approval workflow.
 ```yaml
 jobs:
   manual-bump:
-    uses: your-org/devops/.github/workflows/manual-tag-bump.yml@main
+    uses: zee-sandev/devops/.github/workflows/manual-tag-bump.yml@main
     with:
       environment: 'prd' # dev, qa, prd
       version: '2.1.0' # Exact version to tag
@@ -83,7 +83,7 @@ Automatically creates tags when PRs are merged to specific branches.
 ```yaml
 jobs:
   pr-auto-tag:
-    uses: your-org/devops/.github/workflows/pr-auto-tag.yml@main
+    uses: zee-sandev/devops/.github/workflows/pr-auto-tag.yml@main
     with:
       target-environment: 'dev' # dev or qa only (not prd for safety)
       bump-type: 'patch' # patch, minor, major
@@ -106,7 +106,7 @@ Enhanced version of the original workflow with backward compatibility.
 ```yaml
 jobs:
   legacy-bump:
-    uses: your-org/devops/.github/workflows/tag-bump.yml@main
+    uses: zee-sandev/devops/.github/workflows/tag-bump.yml@main
     with:
       env: 'dev' # Environment
       version: '1.0.0' # Version (ignored if auto-bump is true)
@@ -135,7 +135,7 @@ on:
 
 jobs:
   tag-and-deploy:
-    uses: your-org/devops/.github/workflows/pr-auto-tag.yml@main
+    uses: zee-sandev/devops/.github/workflows/pr-auto-tag.yml@main
     with:
       target-environment: 'dev'
       bump-type: 'patch'
@@ -155,7 +155,7 @@ on:
 
 jobs:
   promote-qa:
-    uses: your-org/devops/.github/workflows/manual-tag-bump.yml@main
+    uses: zee-sandev/devops/.github/workflows/manual-tag-bump.yml@main
     with:
       environment: 'qa'
       version: ${{ github.event.inputs.version }}
@@ -175,7 +175,7 @@ on:
 
 jobs:
   production-release:
-    uses: your-org/devops/.github/workflows/manual-tag-bump.yml@main
+    uses: zee-sandev/devops/.github/workflows/manual-tag-bump.yml@main
     with:
       environment: 'prd'
       version: ${{ github.event.inputs.version }}
@@ -195,7 +195,7 @@ on:
 jobs:
   qa-tag:
     if: github.event.pull_request.merged == true
-    uses: your-org/devops/.github/workflows/pr-auto-tag.yml@main
+    uses: zee-sandev/devops/.github/workflows/pr-auto-tag.yml@main
     with:
       target-environment: 'qa'
       bump-type: 'minor' # Features typically bump minor version
@@ -255,7 +255,7 @@ All workflows provide outputs that can be used in subsequent jobs:
 ```yaml
 jobs:
   tag:
-    uses: your-org/devops/.github/workflows/manual-tag-bump.yml@main
+    uses: zee-sandev/devops/.github/workflows/manual-tag-bump.yml@main
     with:
       environment: 'dev'
       version: '1.0.0'
@@ -329,7 +329,7 @@ on:
 
 jobs:
   deploy:
-    uses: your-org/devops/.github/workflows/deploy.yml@main
+    uses: zee-sandev/devops/.github/workflows/deploy.yml@main
     with:
       tag: ${{ github.ref_name }}
 ```
@@ -345,4 +345,4 @@ For issues or questions about tag management:
 
 ---
 
-**Remember**: Replace `your-org/devops` with your actual organization and repository names!
+**Remember**: Replace `zee-sandev/devops` with your actual organization and repository names!

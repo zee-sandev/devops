@@ -14,7 +14,7 @@ on: [push, pull_request]
 
 jobs:
   ci:
-    uses: your-org/devops/.github/workflows/ci.yml@main
+    uses: zee-sandev/devops/.github/workflows/ci.yml@main
     with:
       node-version: '18'
       pnpm-version: '8'
@@ -32,7 +32,7 @@ on:
 
 jobs:
   auto-tag:
-    uses: your-org/devops/.github/workflows/pr-auto-tag.yml@main
+    uses: zee-sandev/devops/.github/workflows/pr-auto-tag.yml@main
     with:
       target-environment: 'dev'
       bump-type: 'patch'
@@ -54,7 +54,7 @@ on:
 
 jobs:
   deploy:
-    uses: your-org/devops/.github/workflows/deploy.yml@main
+    uses: zee-sandev/devops/.github/workflows/deploy.yml@main
     with:
       tag: ${{ github.ref_name }}
 ```
@@ -100,7 +100,7 @@ Your repository now has:
 ```yaml
 jobs:
   ci:
-    uses: your-org/devops/.github/workflows/ci.yml@main
+    uses: zee-sandev/devops/.github/workflows/ci.yml@main
     with:
       node-version: '20' # Use Node.js 20
       pnpm-version: '9' # Use pnpm 9
@@ -111,7 +111,7 @@ jobs:
 ```yaml
 jobs:
   ci:
-    uses: your-org/devops/.github/workflows/ci.yml@main
+    uses: zee-sandev/devops/.github/workflows/ci.yml@main
     with:
       run-security-audit: false # Skip security audit
       run-build: false # Skip build step
@@ -133,4 +133,4 @@ jobs:
 
 ---
 
-**Remember**: Replace `your-org/devops` with your actual organization and repository names!
+**Remember**: Replace `zee-sandev/devops` with your actual organization and repository names!

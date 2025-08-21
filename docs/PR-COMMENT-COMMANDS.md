@@ -101,7 +101,7 @@ The workflow supports multiple authorization mechanisms:
 Configure permissions when calling the workflow:
 
 ```yaml
-uses: your-org/devops/.github/workflows/versioning/pr-comment-bump.yml@main
+uses: zee-sandev/devops/.github/workflows/versioning/pr-comment-bump.yml@main
 with:
   allowed-users: 'alice,bob,charlie'
   allowed-teams: 'devops-team,release-managers'
@@ -130,7 +130,7 @@ on:
 jobs:
   pr-commands:
     if: github.event.issue.pull_request
-    uses: your-org/devops/.github/workflows/versioning/pr-comment-bump.yml@main
+    uses: zee-sandev/devops/.github/workflows/versioning/pr-comment-bump.yml@main
     secrets: inherit
 ```
 
@@ -148,7 +148,7 @@ on:
 jobs:
   pr-commands:
     if: github.event.issue.pull_request
-    uses: your-org/devops/.github/workflows/versioning/pr-comment-bump.yml@main
+    uses: zee-sandev/devops/.github/workflows/versioning/pr-comment-bump.yml@main
     with:
       allowed-teams: 'devops,release-team'
       require-approval: true
@@ -400,7 +400,7 @@ on:
 
 jobs:
   deploy:
-    uses: your-org/devops/.github/workflows/deployment/deploy.yml@main
+    uses: zee-sandev/devops/.github/workflows/deployment/deploy.yml@main
     with:
       tag: ${{ github.ref_name }}
 ```
