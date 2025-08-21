@@ -5,14 +5,17 @@ inputs:
   tag-name:
     description: 'Name of the tag to create'
     required: true
+    type: string
   force:
     description: 'Force tag creation (overwrite existing)'
     required: false
     default: 'false'
+    type: boolean
   dry-run:
     description: 'Run in dry-run mode (no actual tag creation)'
     required: false
     default: 'false'
+    type: boolean
 
 outputs:
   tag-created:

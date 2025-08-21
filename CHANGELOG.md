@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2024-08-22
+
+### 🔧 Bug Fixes
+
+- **GitHub Actions Compliance**: Fixed workflow path structure to comply with GitHub Actions requirements
+  - Moved all workflows from subdirectories to top level of `.github/workflows/`
+  - Updated all workflow references across documentation and examples
+  - Added descriptive naming convention for better clarity
+  - Created `WORKFLOW-PATHS.md` reference guide
+  - Updated package.json version to 2.1.0
+
+### ✅ Input Validation Fixes
+
+- **Required Type Properties**: Added missing `type` properties to all workflow and action inputs
+  - Fixed `ci-pipeline.yml`, `ci-test.yml`, `ci-lint.yml`, `deploy.yml`, `setup.yml`
+  - Fixed all composite actions: `setup`, `validate-inputs`, `git-setup`, `version-calculator`, `create-tag`
+  - Ensures GitHub Actions validation passes without errors
+  - All inputs now properly specify `type: string` or `type: boolean`
+
 ## [2.0.0] - 2024-01-XX
 
 ### 🎉 Major Refactor and Reorganization

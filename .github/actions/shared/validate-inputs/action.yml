@@ -6,18 +6,22 @@ inputs:
     description: 'Environment to validate (dev, qa, prd)'
     required: false
     default: ''
+    type: string
   version:
     description: 'Version to validate (semantic versioning)'
     required: false
     default: ''
+    type: string
   node-version:
     description: 'Node.js version to validate'
     required: false
     default: ''
+    type: string
   pnpm-version:
     description: 'pnpm version to validate'
     required: false
     default: ''
+    type: string
 
 outputs:
   environment-valid:

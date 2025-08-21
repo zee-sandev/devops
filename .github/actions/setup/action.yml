@@ -6,14 +6,17 @@ inputs:
     description: 'Node.js version to use'
     required: false
     default: '18'
+    type: string
   pnpm-version:
     description: 'pnpm version to use'
     required: false
     default: '8'
+    type: string
   cache-key:
     description: 'Custom cache key for dependencies'
     required: false
     default: ''
+    type: string
 
 runs:
   using: composite

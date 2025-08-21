@@ -6,14 +6,17 @@ inputs:
     description: 'Git fetch depth'
     required: false
     default: '0'
+    type: string
   user-name:
     description: 'Git user name'
     required: false
     default: 'github-actions[bot]'
+    type: string
   user-email:
     description: 'Git user email'
     required: false
     default: 'github-actions[bot]@users.noreply.github.com'
+    type: string
 
 runs:
   using: composite

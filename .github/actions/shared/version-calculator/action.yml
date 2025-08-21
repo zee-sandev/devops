@@ -5,14 +5,17 @@ inputs:
   environment:
     description: 'Environment to calculate version for'
     required: true
+    type: string
   bump-type:
     description: 'Type of version bump (patch, minor, major)'
     required: false
     default: 'patch'
+    type: string
   base-version:
     description: 'Base version if no tags exist'
     required: false
     default: '1.0.0'
+    type: string
 
 outputs:
   current-version:
