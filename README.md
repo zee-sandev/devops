@@ -17,22 +17,26 @@ A comprehensive, enterprise-ready DevOps platform providing reusable GitHub Acti
 devops/
 ├── .github/
 │   ├── actions/
-│   │   ├── setup/                 # Node.js + pnpm setup
-│   │   └── shared/                # Shared composite actions
-│   │       ├── validate-inputs/   # Input validation
-│   │       ├── git-setup/         # Git configuration
-│   │       ├── version-calculator/# Version calculation
-│   │       └── create-tag/        # Tag creation
+│   │   ├── setup/                   # Node.js + pnpm setup
+│   │   └── shared/                  # Shared composite actions
+│   │       ├── validate-inputs/     # Input validation
+│   │       ├── git-setup/           # Git configuration
+│   │       ├── version-calculator/  # Version calculation
+│   │       └── create-tag/          # Tag creation
 │   └── workflows/
-│       ├── main.yml               # Main coordinator workflow
-│       ├── ci/                    # CI/CD workflows
-│       ├── deployment/            # Deployment workflows
-│       ├── versioning/            # Version management
-│       └── utilities/             # Utility workflows
-├── config/                        # Configuration files
-├── docs/                          # Documentation
-├── examples/                      # Usage examples
-├── scripts/                       # Utility scripts
+│       ├── main.yml                 # Main coordinator workflow
+│       ├── ci-pipeline.yml          # Full CI pipeline
+│       ├── ci-test.yml              # Standalone test workflow
+│       ├── ci-lint.yml              # Standalone lint workflow
+│       ├── deploy.yml               # Deployment workflow
+│       ├── version-pr-auto-tag.yml  # Auto-tag on PR/branch
+│       ├── version-manual-bump.yml  # Manual version/tag bump
+│       ├── version-pr-comment-bump.yml # PR comment-based version bump
+│       └── utilities/               # Utility workflows
+├── config/                          # Configuration files
+├── docs/                            # Documentation
+├── examples/                        # Usage examples
+├── scripts/                         # Utility scripts
 └── README.md
 ```
 
