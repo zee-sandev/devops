@@ -24,6 +24,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Ensures GitHub Actions validation passes without errors
   - All inputs now properly specify `type: string` or `type: boolean`
 
+### 🔧 Workflow Reference Fixes
+
+- **Local Action References**: Fixed workflows to use remote action references instead of local ones
+
+  - Updated `ci-pipeline.yml`, `ci-test.yml`, `ci-lint.yml`, `deploy.yml` to use `zee-sandev/devops/.github/actions/setup@main`
+  - Ensures workflows are consumable by other repositories
+  - Eliminates "Can't find 'action.yml'" errors when consuming repositories run workflows
+
+- **Missing Version Tags**: Added `@main` tags to all remote action references
+
+  - Fixed all workflows to properly reference remote actions with version tags
+  - Ensures GitHub Actions can resolve remote action references correctly
+  - Prevents fallback to local action resolution in consuming repositories
+
+- **Steps Reference Issue**: Fixed `deploy.yml` workflow environment reference error
+  - Removed invalid `steps.set-env.outputs.env` reference from environment section
+  - Added conditional production deployment confirmation step
+  - Maintains production deployment safety without breaking workflow execution
+
 ## [2.0.0] - 2024-01-XX
 
 ### 🎉 Major Refactor and Reorganization

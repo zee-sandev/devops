@@ -39,13 +39,13 @@ jobs:
       previous-tag: ${{ steps.outputs.previous-tag }}
     steps:
       - name: Setup Git
-        uses: ./.github/actions/shared/git-setup
+        uses: zee-sandev/devops/.github/actions/shared/git-setup@main
         with:
           fetch-depth: 0
 
       - name: Calculate next version
         id: calc-version
-        uses: ./.github/actions/shared/version-calculator
+        uses: zee-sandev/devops/.github/actions/shared/version-calculator@main
         with:
           environment: ${{ inputs.environment }}
           bump-type: ${{ inputs.bump-type }}
@@ -53,7 +53,7 @@ jobs:
 
       - name: Create new tag
         id: bump
-        uses: ./.github/actions/shared/create-tag
+        uses: zee-sandev/devops/.github/actions/shared/create-tag@main
         with:
           tag-name: ${{ steps.calc-version.outputs.next-tag }}
           dry-run: ${{ inputs.dry-run }}

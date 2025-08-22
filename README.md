@@ -222,7 +222,7 @@ Reusable Node.js and pnpm setup with caching.
 
 ```yaml
 - name: Validate inputs
-  uses: zee-sandev/devops/.github/actions/shared/validate-inputs@main
+  uses: zee-sandev/devops/.github/actions/shared/validate-inputs@main@main
   with:
     environment: 'dev'
     version: '1.2.3'
@@ -232,7 +232,7 @@ Reusable Node.js and pnpm setup with caching.
 
 ```yaml
 - name: Setup Git
-  uses: zee-sandev/devops/.github/actions/shared/git-setup@main
+  uses: zee-sandev/devops/.github/actions/shared/git-setup@main@main
   with:
     fetch-depth: 0
 ```
@@ -241,7 +241,7 @@ Reusable Node.js and pnpm setup with caching.
 
 ```yaml
 - name: Calculate next version
-  uses: zee-sandev/devops/.github/actions/shared/version-calculator@main
+  uses: zee-sandev/devops/.github/actions/shared/version-calculator@main@main
   with:
     environment: 'dev'
     bump-type: 'patch'
@@ -251,7 +251,7 @@ Reusable Node.js and pnpm setup with caching.
 
 ```yaml
 - name: Create tag
-  uses: zee-sandev/devops/.github/actions/shared/create-tag@main
+  uses: zee-sandev/devops/.github/actions/shared/create-tag@main@main
   with:
     tag-name: 'dev-v1.2.3'
     force: false

@@ -96,10 +96,10 @@ Composite action paths remain the same:
 uses: your-org/devops/.github/actions/setup@main
 
 # Shared Actions
-uses: your-org/devops/.github/actions/shared/validate-inputs@main
-uses: your-org/devops/.github/actions/shared/git-setup@main
-uses: your-org/devops/.github/actions/shared/version-calculator@main
-uses: your-org/devops/.github/actions/shared/create-tag@main
+uses: your-org/devops/.github/actions/shared/validate-inputs@main@main
+uses: your-org/devops/.github/actions/shared/git-setup@main@main
+uses: your-org/devops/.github/actions/shared/version-calculator@main@main
+uses: your-org/devops/.github/actions/shared/create-tag@main@main
 ```
 
 ---

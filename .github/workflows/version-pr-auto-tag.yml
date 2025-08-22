@@ -64,7 +64,7 @@ jobs:
 
       - name: Auto-bump tag
         id: tag
-        uses: ./.github/workflows/auto-tag-bump.yml
+        uses: zee-sandev/devops/.github/workflows/auto-tag-bump.yml
         with:
           bump-type: ${{ inputs.bump-type }}
           environment: ${{ inputs.target-environment }}

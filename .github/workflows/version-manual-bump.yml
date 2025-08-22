@@ -38,7 +38,7 @@ jobs:
     steps:
       - name: Validate inputs
         id: check-env
-        uses: ./.github/actions/shared/validate-inputs
+        uses: zee-sandev/devops/.github/actions/shared/validate-inputs@main
         with:
           environment: ${{ inputs.environment }}
           version: ${{ inputs.version }}
@@ -64,7 +64,7 @@ jobs:
       release-url: ${{ steps.create-release.outputs.release-url }}
     steps:
       - name: Setup Git
-        uses: ./.github/actions/shared/git-setup
+        uses: zee-sandev/devops/.github/actions/shared/git-setup@main
         with:
           fetch-depth: 0
 
@@ -107,7 +107,7 @@ jobs:
 
       - name: Create or update tag
         id: create-tag
-        uses: ./.github/actions/shared/create-tag
+        uses: zee-sandev/devops/.github/actions/shared/create-tag@main
         with:
           tag-name: ${{ needs.validation.outputs.tag-name }}
           force: ${{ inputs.force }}
